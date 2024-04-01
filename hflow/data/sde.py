@@ -1,8 +1,9 @@
 import random
 
 import jax.random
-from diffrax import (ControlTerm, Euler, Heun, MultiTerm, ODETerm, SaveAt,
-                     VirtualBrownianTree, diffeqsolve)
+from diffrax import (Euler, Heun, MultiTerm, ODETerm, SaveAt,
+                     VirtualBrownianTree, WeaklyDiagonalControlTerm,
+                     diffeqsolve)
 from jax import jit, vmap
 
 
@@ -14,8 +15,8 @@ def solve_sde(drift, diffusion, t_eval, get_ic, n_samples, dt=1e-2, key=None):
         ikey, skey = jax.random.split(key)
         y0 = get_ic(ikey)
         brownian_motion = VirtualBrownianTree(
-            t0, t1, tol=1e-3, shape=(), key=skey)
-        terms = MultiTerm(ODETerm(drift), ControlTerm(
+            t0, t1, tol=1e-3, shape=y0.shape, key=skey)
+        terms = MultiTerm(ODETerm(drift), WeaklyDiagonalControlTerm(
             diffusion, brownian_motion))
         solver = Euler()
         saveat = SaveAt(ts=t_eval)

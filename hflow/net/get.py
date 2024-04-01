@@ -1,18 +1,32 @@
+import jax.numpy as jnp
 import numpy as np
 
-from hflow.config import Network
+from hflow.config import Config, Network
 from hflow.net.build import build_colora
 
 
-def get_colora(unet: Network, hnet: Network, dataset, key):
+def get_network(cfg: Config, data, key):
 
-    mu_t, x = dataset.sample()
-    B, MT = mu_t.shape
-    B, N, Q, D = x.shape
+    u_fn, h_fn, params_init = get_colora(
+        cfg.unet, cfg.hnet, data, key)
+
+    def s_fn(t, x, params):
+        psi, theta = params
+        phi = h_fn(psi, t)
+        return jnp.squeeze(u_fn(theta, phi, x))
+
+    return s_fn, params_init
+
+
+def get_colora(unet: Network, hnet: Network, data, key):
+
+    sols, mu, t = data
+    MT = mu.shape[-1] + 1
+    M, T, N, D = sols.shape
 
     x_dim = D
     mu_t_dim = MT
-    u_dim = Q
+    u_dim = 1
     rank = unet.rank
     period = np.asarray([1.0]*x_dim)
 

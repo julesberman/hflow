@@ -10,9 +10,9 @@ from hflow.misc.misc import epoch_time, unique_id
 
 # sweep configurationm, if empty will not sweep
 SWEEP = {}
-SWEEP = {
-    'train_data.n_samples': '1_000,10_000,25_000'
-}
+# SWEEP = {
+#     'data.n_samples': '1_000,10_000,25_000'
+# }
 
 SLURM_CONFIG = {
     'timeout_min': 60,
@@ -37,20 +37,17 @@ class Network:
 @dataclass
 class Optimizer:
     lr: float = 5e-3
-    epochs: int | None = 250
-    batch_size: int = 10
+    iters: int | None = 250
     scheduler: bool = True
     optimizer: str = 'adam'
 
 
 @dataclass
-class Train_Data:
+class Data:
     ode: str = 'euler'
-    dt: float = 1e-2
-    t_end: int = 20
-    n_samples: int = 50_000
-    n_time: int = 30
-    # mus: None = None
+    dt: float = 5e-3
+    t_end: int = 10
+    n_samples: int = 25_000
 
 
 @dataclass
@@ -61,16 +58,26 @@ class Loss:
 
 
 @dataclass
+class Sample:
+    bs_n: int = 256
+    bs_t: int = 256
+    scheme_t: str = 'gauss'
+    scheme_n: str = 'rand'
+
+
+@dataclass
 class Config:
 
-    problem: str = ''
+    problem: str
 
     unet: Network = field(default_factory=Network)
     hnet: Network = field(default_factory=Network)
     optimizer: Optimizer = field(default_factory=Optimizer)
-    train_data: Train_Data = field(default_factory=Train_Data)
+    data: Data = field(default_factory=Data)
 
     loss: Loss = field(default_factory=Loss)
+
+    sample: Sample = field(default_factory=Sample)
 
     # misc
     name: str = field(default_factory=lambda: epoch_time(2))

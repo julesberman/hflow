@@ -6,7 +6,9 @@ from functools import wraps
 from time import time
 
 import jax
+import numpy as np
 from jax.experimental.host_callback import id_print, id_tap
+from scipy.special import eval_legendre, roots_legendre
 from tqdm.auto import tqdm
 
 
@@ -54,3 +56,16 @@ def epoch_time(decimals=0) -> int:
 def count_params(tree):
     param_count = sum(x.size for x in jax.tree_util.tree_leaves(tree))
     return param_count
+
+
+def gauss_quadrature_weights_points(n, a=0, b=1):
+    points, weights = roots_legendre(n)
+    points = 0.5 * (points + 1) * (b - a) + a
+    weights = weights * 0.5 * (b - a)
+    return points, weights
+
+
+def pts_array_from_space(space):
+    m_grids = np.meshgrid(*space,  indexing='ij')
+    x_pts = np.asarray([m.flatten() for m in m_grids]).T
+    return x_pts
