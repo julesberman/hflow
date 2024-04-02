@@ -12,7 +12,7 @@ from hflow.misc.jax import get_rand_idx
 from hflow.misc.misc import (gauss_quadrature_weights_points,
                              pts_array_from_space)
 
-
+import hflow.io.result as R
 def get_arg_fn(sample_cfg: Sample, data):
 
     sols, mu_data, t_data = data
@@ -47,7 +47,7 @@ def get_data_fn(sols, mu_data, t_data, quad_weights, bs_n, bs_t, scheme_t, schem
         nonlocal sols
         nonlocal t_data
 
-        key, keym, keyt = jax.random.split(key, num=3)
+        keyn, keym, keyt = jax.random.split(key, num=3)
 
         m_idx = jax.random.randint(keym, minval=0, maxval=M, shape=())
         mu_sample = mu_data[m_idx]
@@ -63,12 +63,12 @@ def get_data_fn(sols, mu_data, t_data, quad_weights, bs_n, bs_t, scheme_t, schem
             t_sample = t_data
 
         if scheme_n == 'rand':
-            keys = jax.random.split(key, num=bs_t+2)
+            keys = jax.random.split(keyn, num=bs_t+2)
             sample_idx = vmap(get_rand_idx, (0, None, None))(keys, N, bs_n)
             sols_sample = sols_sample[jnp.arange(len(sols_sample))[
                 :, None], sample_idx]
         else:
-            idx = get_rand_idx(key, N, bs_n)
+            idx = get_rand_idx(keyn, N, bs_n)
             sols_sample = sols_sample[:, idx]
 
         return sols_sample, mu_sample, t_sample, quad_weights

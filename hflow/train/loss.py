@@ -35,15 +35,15 @@ def Action_Match(s, noise=0.0, sigma=0.0):
     trace_dds = hess_trace_estimator(s, argnum=1)
     trace_dds_Vx = vmap(trace_dds, (None, None, 0, None))
 
-    def am_loss(psi_theta, x_t_batch, mu, t_batch, quad_weights, key):
+    def am_loss(params, x_t_batch, mu, t_batch, quad_weights, key):
         x_t_batch += jax.random.normal(key, x_t_batch.shape)*noise
 
-        t_batch = jnp.hstack([jnp.ones((len(t_batch), 1)) * mu, t_batch])
+        t_batch = jnp.hstack([jnp.ones((len(t_batch), len(mu))) * mu, t_batch])
 
         T, N, D = x_t_batch.shape
         T, MT = t_batch.shape
-        bound = s_Vx(t_batch[0], x_t_batch[0], psi_theta) - \
-            s_Vx(t_batch[-1], x_t_batch[-1], psi_theta)
+        bound = s_Vx(t_batch[0], x_t_batch[0], params) - \
+            s_Vx(t_batch[-1], x_t_batch[-1], params)
 
         x_t_batch = x_t_batch[1:-1]
         t_batch = t_batch[1:-1]
@@ -56,18 +56,20 @@ def Action_Match(s, noise=0.0, sigma=0.0):
             x_batch = rearrange(x_batch, '(N D) -> N D', D=D)
 
             mu, t = mu_t[:1], mu_t[1:]
-            ut = s_dt_Vx(mu, t, x_batch, psi_theta)
-
+            ut = s_dt_Vx(mu, t, x_batch, params)
+            ut = jnp.squeeze(ut)
+            
             # entropic
             if sigma > 0.0:
-                gu, trace_ets = trace_dds_Vx(key, mu_t, x_batch, psi_theta)
+                gu, trace_ets = trace_dds_Vx(key, mu_t, x_batch, params)
                 ent = trace_ets*sigma**2*0.5
             else:
-                gu = s_dx_Vx(mu_t, x_batch, psi_theta)
+                gu = s_dx_Vx(mu_t, x_batch, params)
                 ent = 0.0
 
+       
             gu = 0.5*jnp.sum(gu**2, axis=1)
-
+     
             return (ut+gu+ent).mean()
 
         interior = vmap(interior_loss)(xt_tensor)

@@ -16,27 +16,24 @@ def get_data(problem, data_cfg: Data):
     n_samples = data_cfg.n_samples
     dt, t_end = data_cfg.dt, data_cfg.t_end
     t_eval = np.linspace(0.0, t_end, int(t_end/dt)+1)
-    mus = np.asarray([0.1, 0.15, 0.2])
 
     sols = []
 
     if problem == 'vlasov':
+        mus = np.asarray([0.1, 0.15, 0.2])
         for mu in mus:
-            res = run_vlasov(n_samples, t_eval, mu)
+            res = run_vlasov(n_samples//2, t_eval, mu)
             sols.append(res)
         sols = np.asarray(sols)
     elif problem == 'osc':
+        mus = np.asarray([0.15, 0.1, 0.05])
         def solve_for_mu(mu):
             drift, diffusion = get_2d_osc(mu)
             return solve_sde(drift, diffusion, t_eval, get_ic_osc, n_samples, dt=data_cfg.dt)
         sols = vmap(jit(solve_for_mu))(mus)
         sols = rearrange(sols, 'M N T D -> M T N D')
 
-    # sub sample time
-    # T = sols.shape[1]
-    # nn = T // data_cfg.n_time
-    # sols = sols[:, ::nn]
-    # t_eval = t_eval[::nn]
+
     log.info(f'train data (M x T x N x D) {sols.shape}')
 
     R.RESULT['t_eval'] = t_eval

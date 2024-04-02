@@ -26,18 +26,18 @@ SLURM_CONFIG = {
 @dataclass
 class Network:
     model: str = 'dnn'
-    width: int = 25
-    layers: List[str] = field(default_factory=lambda: ['C']*8)
+    width: int = 35
+    layers: List[str] = field(default_factory=lambda: ['C']*7)
     activation: str = 'swish'
     rank: int = 3
-    full: bool = False
+    full: bool = True
     bias: bool = True
 
 
 @dataclass
 class Optimizer:
     lr: float = 5e-3
-    iters: int = 2_500
+    iters: int = 2_000
     scheduler: bool = True
     optimizer: str = 'adamw'
 
@@ -47,14 +47,14 @@ class Data:
     ode: str = 'euler'
     dt: float = 1e-2
     t_end: int = 10
-    n_samples: int = 25_000
+    n_samples: int = 20_000
 
 
 @dataclass
 class Loss:
     loss_fn: str = 'am'
     noise: float = 0.0
-    sigma: float = 0.0
+    sigma: float = 1e-1
 
 
 @dataclass
@@ -77,7 +77,7 @@ class Config:
     problem: str
 
     unet: Network = field(default_factory=Network)
-    hnet: Network = field(default_factory=Network)
+    hnet: Network = field(default_factory=lambda: Network(width=15, layers=['D']*3))
     optimizer: Optimizer = field(default_factory=Optimizer)
     data: Data = field(default_factory=Data)
 

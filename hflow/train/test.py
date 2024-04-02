@@ -16,7 +16,7 @@ from hflow.io.utils import log
 def test_model(cfg: Config, data, s_fn, opt_params, key):
     test_cfg = cfg.test
     sol, mus, t = data
-    t_int = np.squeeze(t)
+    t_int = np.linspace(0.0, 1.0, len(t))
     M, T, N, D = sol.shape
     samples_idx = get_rand_idx(key, sol.shape[2], test_cfg.n_samples)
     ics = sol[:, 0, samples_idx, :]
@@ -25,11 +25,13 @@ def test_model(cfg: Config, data, s_fn, opt_params, key):
     true_sol = sol[:, :, samples_idx]
     
     mu_index = 0
+  
     true_sol = true_sol[mu_index]
     test_sol = solve_test(s_fn, opt_params, ics[mu_index], t_int,
-                          test_cfg.n_samples, test_cfg.dt, sigma, mus[mu_index], key)
+                        test_cfg.dt, sigma, mus[mu_index], key)
     R.RESULT['true_sol'] = true_sol
     R.RESULT['test_sol'] = test_sol
+    R.RESULT['t_int'] = t_int
     
     compute_metrics(true_sol, test_sol)
     
@@ -39,16 +41,13 @@ def test_model(cfg: Config, data, s_fn, opt_params, key):
     return test_sol
 
 
-def solve_test(s_fn, params, ics, t_int, n_samples, dt, sigma, mu, key):
+def solve_test(s_fn, params, ics, t_int, dt, sigma, mu, key):
     s_dx = jacrev(s_fn, 1)
 
     
-    def get_ic(key):
-        return ics
-    
     def drift(t, y, *args):
-        t_mu = jnp.concatenate([mu, t.reshape(1)])
-        f = jnp.squeeze(s_dx(t_mu, y, params))
+        mu_t = jnp.concatenate([mu, t.reshape(1)])
+        f = jnp.squeeze(s_dx(mu_t, y, params))
         return f
 
     def diffusion(t, y, *args):
@@ -70,16 +69,9 @@ def plot_test(true_sol, test_sol, t_int):
     plot_sol = jnp.hstack([true_sol, test_sol])
     idx = np.linspace(0, plot_sol.shape[1], n_plot*2, dtype=np.uint32)
     plot_sol = plot_sol[:, idx]
-
     cs = [*['r']*n_plot,*['b']*n_plot]
-    
-
     scatter_movie(plot_sol, t=t_int, c=cs, alpha=0.3, xlim=[0,1], ylim=[0,1], show=False, save_to=f'{outdir}/sol.gif')
     
-    
-
-
-
 def compute_metrics(true_sol, test_sol):
     # shape is T N D
     def get_metric(sol):
