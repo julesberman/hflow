@@ -24,3 +24,9 @@ NOTE make sure that if you install jax with GPU and cuda support that you still 
 jax==0.4.23
 jaxlib==0.4.23
 ```
+
+## Running
+
+```
+python hflow/run.py problem=osc
+```

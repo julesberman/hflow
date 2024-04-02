@@ -159,15 +159,20 @@ def line_movie(sol, frames=50, t=None, x=None,  title='', interval=100, ylim=Non
         return HTML(ani.to_jshtml())
 
 
-def scatter_movie(pts, c='r', size=None, alpha=1, frames=50, t=None, title='', interval=100, save_to=None, show=True, fps=30):
+def scatter_movie(pts, c='r', size=None, xlim=None, ylim=None, alpha=1, frames=50, t=None, title='', interval=100, save_to=None, show=True, fps=30):
     pts = rearrange(pts, 't n d -> t d n')
     fig, ax = plt.subplots()
 
     sct = ax.scatter(x=pts[0, 0], y=pts[0, 1], alpha=alpha, s=size, c=c)
     mm = pts.min(axis=(0, 2))
     mx = pts.max(axis=(0, 2))
-    ax.set_ylim([mm[1], mx[1]])
-    ax.set_xlim([mm[0], mx[0]])
+    
+    if xlim is None:
+        xlim = [mm[0], mx[0]]
+    if ylim is None:
+        ylim = [mm[1], mx[1]]
+    ax.set_ylim(ylim)
+    ax.set_xlim(xlim)
 
     tx = ax.set_title('Frame 0')
 

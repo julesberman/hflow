@@ -14,10 +14,8 @@ def get_loss_fn(loss_cfg: Loss, s_fn):
 
     noise = loss_cfg.noise
     sigma = loss_cfg.sigma
-    match loss_cfg.loss_fn:
-
-        case 'am':
-            loss_fn = Action_Match(s_fn, noise=noise, sigma=sigma)
+    if loss_cfg.loss_fn == 'am':
+        loss_fn = Action_Match(s_fn, noise=noise, sigma=sigma)
 
     return loss_fn
 
@@ -77,7 +75,7 @@ def Action_Match(s, noise=0.0, sigma=0.0):
         if quad_weights is not None:
             interior *= quad_weights
 
-        loss = (bound.mean() + interior.mean())
+        loss = (bound.mean() + interior.sum())
 
         return loss
 

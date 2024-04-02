@@ -16,15 +16,15 @@ from hflow.misc.misc import (gauss_quadrature_weights_points,
 def get_arg_fn(sample_cfg: Sample, data):
 
     sols, mu_data, t_data = data
-    quad_weights = None
+    bs_t = sample_cfg.bs_t
+    quad_weights = jnp.ones((bs_t))/bs_t
     M, T, N, D = sols.shape
     bs_t = min(sample_cfg.bs_t, T)
     bs_n = min(sample_cfg.bs_n, N)
 
     if sample_cfg.scheme_t == 'gauss':
         t_data = t_data / t_data[-1]
-        g_pts_01, quad_weights = gauss_quadrature_weights_points(
-            sample_cfg.bs_t, a=0.0, b=1.0)
+        g_pts_01, quad_weights = gauss_quadrature_weights_points(bs_t, a=0.0, b=1.0)
 
         start, end = jnp.asarray([0]), jnp.asarray([1.0])
         g_pts_01 = jnp.concatenate([start, g_pts_01, end])

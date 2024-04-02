@@ -19,18 +19,18 @@ def get_data(problem, data_cfg: Data):
     mus = np.asarray([0.1, 0.15, 0.2])
 
     sols = []
-    match problem:
-        case 'vlasov':
-            for mu in mus:
-                res = run_vlasov(n_samples, t_eval, mu)
-                sols.append(res)
-            sols = np.asarray(sols)
-        case 'osc':
-            def solve_for_mu(mu):
-                drift, diffusion = get_2d_osc(mu)
-                return solve_sde(drift, diffusion, t_eval, get_ic_osc, n_samples, dt=data_cfg.dt)
-            sols = vmap(jit(solve_for_mu))(mus)
-            sols = rearrange(sols, 'M N T D -> M T N D')
+
+    if problem == 'vlasov':
+        for mu in mus:
+            res = run_vlasov(n_samples, t_eval, mu)
+            sols.append(res)
+        sols = np.asarray(sols)
+    elif problem == 'osc':
+        def solve_for_mu(mu):
+            drift, diffusion = get_2d_osc(mu)
+            return solve_sde(drift, diffusion, t_eval, get_ic_osc, n_samples, dt=data_cfg.dt)
+        sols = vmap(jit(solve_for_mu))(mus)
+        sols = rearrange(sols, 'M N T D -> M T N D')
 
     # sub sample time
     # T = sols.shape[1]

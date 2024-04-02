@@ -14,8 +14,6 @@ from hflow.io.result import init_result
 from hflow.io.utils import log
 from hflow.misc.misc import unique_id
 
-os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
-
 
 def setup(config: Config):
 

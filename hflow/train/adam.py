@@ -16,7 +16,7 @@ str_to_opt = {
 }
 
 
-def adam_opt(theta_init, loss_fn, args_fn, init_state=None, steps=1000, learning_rate=1e-3, scheduler=True, verbose=False, loss_tol=None, optimizer='adam', key=None):
+def adam_opt(theta_init, loss_fn, args_fn, init_state=None, steps=1000, learning_rate=1e-3, scheduler=True, verbose=False, loss_tol=None, optimizer='adam', key=None, return_params=False):
     # adds warm up cosine decay
     if scheduler:
         learning_rate = optax.cosine_decay_schedule(
@@ -43,7 +43,7 @@ def adam_opt(theta_init, loss_fn, args_fn, init_state=None, steps=1000, learning
     params = theta_init
     pbar = tqdm(range(steps), disable=not verbose)
     opt_loss, opt_params = float('inf'), None
-    loss_history = []
+    loss_history, param_history = [], []
     n_rec = max(steps // 1000, 1)
 
     for i in pbar:
@@ -61,6 +61,8 @@ def adam_opt(theta_init, loss_fn, args_fn, init_state=None, steps=1000, learning
 
         if i % n_rec == 0:
             loss_history.append(cur_loss)
+            if return_params:
+                param_history.append(params_new)
 
         params = params_new
         state = state_new
@@ -72,4 +74,7 @@ def adam_opt(theta_init, loss_fn, args_fn, init_state=None, steps=1000, learning
             break
 
     loss_history = np.asarray(loss_history)
+    if return_params:
+        return params, opt_params, loss_history, param_history
+    
     return params, opt_params, loss_history

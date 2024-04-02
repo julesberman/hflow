@@ -1,6 +1,6 @@
 
 from dataclasses import dataclass, field
-from typing import Any, List
+from typing import Any, List, Union
 
 from hydra.core.config_store import ConfigStore
 from hydra.types import RunMode
@@ -27,25 +27,25 @@ SLURM_CONFIG = {
 class Network:
     model: str = 'dnn'
     width: int = 25
-    layers: List[str] = field(default_factory=lambda: ['C']*6)
+    layers: List[str] = field(default_factory=lambda: ['C']*8)
     activation: str = 'swish'
     rank: int = 3
     full: bool = False
-    lora_filter: List[str] = field(default_factory=lambda: ['A', 'B'])
+    bias: bool = True
 
 
 @dataclass
 class Optimizer:
     lr: float = 5e-3
-    iters: int | None = 250
+    iters: int = 2_500
     scheduler: bool = True
-    optimizer: str = 'adam'
+    optimizer: str = 'adamw'
 
 
 @dataclass
 class Data:
     ode: str = 'euler'
-    dt: float = 5e-3
+    dt: float = 1e-2
     t_end: int = 10
     n_samples: int = 25_000
 
@@ -62,7 +62,7 @@ class Sample:
     bs_n: int = 256
     bs_t: int = 256
     scheme_t: str = 'gauss'
-    scheme_n: str = 'rand'
+    scheme_n: str = 'traj'
 
 
 @dataclass
@@ -82,12 +82,12 @@ class Config:
     # misc
     name: str = field(default_factory=lambda: epoch_time(2))
     x64: bool = False  # whether to use 64 bit precision in jax
-    platform: str | None = None  # gpu or cpu, None will let jax default
+    platform: Union[str, None] = None  # gpu or cpu, None will let jax default
     # output_dir: str = './outputs/${hydra.job.name}'  # where to save results, if None nothing is saved
 
     seed: int = 1
     debug_nans: bool = False  # weather to debug nans
-    info: str | None = None  # optional info about details of the experiment
+    info: Union[str, None] = None  # optional info about details of the experiment
 
     # hydra config configuration
     hydra: Any = field(default_factory=lambda: hydra_config)
@@ -139,6 +139,11 @@ hydra_config = {
             "colorlog": {
                 "format": '[%(levelname)s] - %(message)s'
             }
+        }
+    },
+    "job":{
+        "env_set":{
+            "XLA_PYTHON_CLIENT_PREALLOCATE": "false"
         }
     }
 }
