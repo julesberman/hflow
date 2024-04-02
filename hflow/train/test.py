@@ -22,22 +22,21 @@ def test_model(cfg: Config, data, s_fn, opt_params, key):
     ics = sol[:, 0, samples_idx, :]
 
     sigma = cfg.loss.sigma
-    true_sol = sol[:, :, samples_idx]
+    sol = sol[:, :, samples_idx]
     
-    mu_index = 0
-  
-    true_sol = true_sol[mu_index]
-    test_sol = solve_test(s_fn, opt_params, ics[mu_index], t_int,
-                        test_cfg.dt, sigma, mus[mu_index], key)
-    R.RESULT['true_sol'] = true_sol
-    R.RESULT['test_sol'] = test_sol
     R.RESULT['t_int'] = t_int
-    
-    compute_metrics(true_sol, test_sol)
-    
-    if test_cfg.plot:
-        plot_test(true_sol, test_sol, t_int)
-    
+    for mu_i in range(len(mus)):
+        true_sol = sol[mu_i]
+        test_sol = solve_test(s_fn, opt_params, ics[mu_i], t_int,
+                            test_cfg.dt, sigma, mus[mu_i], key)
+        R.RESULT[f'true_sol_{mu_i}'] = true_sol
+        R.RESULT[f'test_sol_{mu_i}'] = test_sol
+     
+        compute_metrics(true_sol, test_sol, mu_i)
+        
+        if test_cfg.plot:
+            plot_test(true_sol, test_sol, t_int, test_cfg.plot_samples, mu_i)
+        
     return test_sol
 
 
@@ -57,22 +56,21 @@ def solve_test(s_fn, params, ics, t_int, dt, sigma, mu, key):
     test_sol = vmap(solve_sde_ic, (0, 0, None, None, None, None))(ics, keys, t_int, dt, drift, diffusion)
     test_sol = rearrange(test_sol, 'N T D -> T N D')
 
-    # test_sol = solve_sde(drift, diffusion, t_int, get_ic, n_samples, dt=dt, key=key)
-    
     return test_sol
 
 
 
-def plot_test(true_sol, test_sol, t_int):
+def plot_test(true_sol, test_sol, t_int, n_plot, mu_i):
     outdir = HydraConfig.get().runtime.output_dir
-    n_plot = 500
-    plot_sol = jnp.hstack([true_sol, test_sol])
-    idx = np.linspace(0, plot_sol.shape[1], n_plot*2, dtype=np.uint32)
-    plot_sol = plot_sol[:, idx]
+    N = test_sol.shape[1]
+    n_plot = min(N-1, n_plot)
+    idx = np.linspace(0, N-1, n_plot, dtype=np.uint32)
+    plot_sol = jnp.hstack([true_sol[:, idx], test_sol[:, idx]])
+  
     cs = [*['r']*n_plot,*['b']*n_plot]
-    scatter_movie(plot_sol, t=t_int, c=cs, alpha=0.3, xlim=[0,1], ylim=[0,1], show=False, save_to=f'{outdir}/sol.gif')
+    scatter_movie(plot_sol, t=t_int, c=cs, alpha=0.3, xlim=[0,1], ylim=[0,1], show=False, save_to=f'{outdir}/sol_{mu_i}.gif')
     
-def compute_metrics(true_sol, test_sol):
+def compute_metrics(true_sol, test_sol, mu_i):
     # shape is T N D
     def get_metric(sol):
         mm = np.mean(sol, axis=1)
@@ -88,12 +86,12 @@ def compute_metrics(true_sol, test_sol):
     mean_t_err_m = np.mean(t_err_m)
     mean_t_err_v = np.mean(t_err_v)
     
-    R.RESULT['time_mean_err'] = t_err_m
-    R.RESULT['time_var_err'] = t_err_v
+    R.RESULT[f'time_mean_err_{mu_i}'] = t_err_m
+    R.RESULT[f'time_var_err_{mu_i}'] = t_err_v
     
-    R.RESULT['mean_mean_err'] = mean_t_err_m
-    R.RESULT['mean_var_err'] = mean_t_err_v
+    R.RESULT[f'mean_mean_err_{mu_i}'] = mean_t_err_m
+    R.RESULT[f'mean_var_err_{mu_i}'] = mean_t_err_v
     
     
-    log.info(f'mean_mean_err: {mean_t_err_m:.3e}')
-    log.info(f'mean_var_err:  {mean_t_err_v:.3e}')
+    log.info(f'mean_mean_err {mu_i}: {mean_t_err_m:.3e}')
+    log.info(f'mean_var_err {mu_i}:  {mean_t_err_v:.3e}')

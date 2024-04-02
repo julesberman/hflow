@@ -30,3 +30,6 @@ jaxlib==0.4.23
 ```
 python hflow/run.py problem=osc
 ```
+```
+python hflow/run.py problem=vlasov data.t_end=25
+```

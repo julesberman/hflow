@@ -68,7 +68,8 @@ class Sample:
 @dataclass
 class Test:
     dt:float = 1e-3
-    n_samples: int = 500
+    n_samples: int = 2500
+    plot_samples: int = 2000
     plot:bool = True
 
 @dataclass

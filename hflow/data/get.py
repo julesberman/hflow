@@ -39,6 +39,7 @@ def get_data(problem, data_cfg: Data):
     R.RESULT['t_eval'] = t_eval
     R.RESULT['data'] = sols
 
+
     sols, mu, t = normalize_dataset(sols, mus, t_eval)
     data = (sols, mu, t)
 
