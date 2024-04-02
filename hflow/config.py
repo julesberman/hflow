@@ -66,6 +66,12 @@ class Sample:
 
 
 @dataclass
+class Test:
+    dt:float = 1e-3
+    n_samples: int = 500
+    plot:bool = True
+
+@dataclass
 class Config:
 
     problem: str
@@ -77,6 +83,7 @@ class Config:
 
     loss: Loss = field(default_factory=Loss)
 
+    test: Test = field(default_factory=Test)
     sample: Sample = field(default_factory=Sample)
 
     # misc

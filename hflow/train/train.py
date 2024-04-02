@@ -17,4 +17,4 @@ def train_model(opt_cfg: Optimizer, arg_fn, loss_fn, psi_theta_init, key):
     R.RESULT['opt_params'] = opt_params
     R.RESULT['loss_history'] = loss_history
 
-    return opt_params
+    return last_params

@@ -4,6 +4,8 @@ from jax import jacfwd, jacrev, jvp, vmap
 
 
 def get_rand_idx(key, N, bs):
+    if bs > N:
+        bs = N
     idx = jnp.arange(0, N)
     return jax.random.choice(key, idx, shape=(bs,), replace=False)
 
