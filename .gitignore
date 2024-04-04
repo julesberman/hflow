@@ -1,4 +1,5 @@
-outputs   
+outputs
+results
 .vscode
 .svn
 colora.egg-info

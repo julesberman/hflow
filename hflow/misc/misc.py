@@ -6,6 +6,7 @@ from functools import wraps
 from time import time
 
 import jax
+import jax.numpy as jnp
 import numpy as np
 from jax.experimental.host_callback import id_print, id_tap
 from scipy.special import eval_legendre, roots_legendre
@@ -66,6 +67,6 @@ def gauss_quadrature_weights_points(n, a=0, b=1):
 
 
 def pts_array_from_space(space):
-    m_grids = np.meshgrid(*space,  indexing='ij')
-    x_pts = np.asarray([m.flatten() for m in m_grids]).T
+    m_grids = jnp.meshgrid(*space,  indexing='ij')
+    x_pts = jnp.asarray([m.flatten() for m in m_grids]).T
     return x_pts

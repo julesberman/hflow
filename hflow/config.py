@@ -10,12 +10,15 @@ from hflow.misc.misc import epoch_time, unique_id
 
 # sweep configurationm, if empty will not sweep
 SWEEP = {}
-# SWEEP = {
-#     'data.n_samples': '1_000,10_000,25_000'
-# }
+SWEEP = {
+    'optimizer.iters':'5_000,10_000,25_000,100_000',
+    'loss.sigma': '1e-1,1e-2,0.0',
+    'unet.width': '35,64,128',
+    'sample.scheme_n': 'rand,traj'
+}
 
 SLURM_CONFIG = {
-    'timeout_min': 60,
+    'timeout_min': 60*6,
     'cpus_per_task': 8,
     'mem_gb': 25,
     # 'gpus_per_node': 1,
@@ -27,7 +30,7 @@ SLURM_CONFIG = {
 class Network:
     model: str = 'dnn'
     width: int = 35
-    layers: List[str] = field(default_factory=lambda: ['C']*7)
+    layers: List[str] = field(default_factory=lambda: ['P',*['C']*7])
     activation: str = 'swish'
     rank: int = 3
     full: bool = True
@@ -45,9 +48,10 @@ class Optimizer:
 @dataclass
 class Data:
     ode: str = 'euler'
-    dt: float = 1e-2
+    dt: float = 5e-3
     t_end: int = 10
     n_samples: int = 20_000
+    normalize: bool = True
 
 
 @dataclass
@@ -59,8 +63,8 @@ class Loss:
 
 @dataclass
 class Sample:
-    bs_n: int = 256
-    bs_t: int = 256
+    bs_n: int = 128
+    bs_t: int = 128
     scheme_t: str = 'gauss'
     scheme_n: str = 'traj'
 
@@ -68,7 +72,7 @@ class Sample:
 @dataclass
 class Test:
     dt:float = 1e-3
-    n_samples: int = 2500
+    n_samples: int = 25_000
     plot_samples: int = 2000
     plot:bool = True
 
@@ -91,7 +95,7 @@ class Config:
     name: str = field(default_factory=lambda: epoch_time(2))
     x64: bool = False  # whether to use 64 bit precision in jax
     platform: Union[str, None] = None  # gpu or cpu, None will let jax default
-    # output_dir: str = './outputs/${hydra.job.name}'  # where to save results, if None nothing is saved
+    # output_dir: str = './results/${hydra.job.name}'  # where to save results, if None nothing is saved
 
     seed: int = 1
     debug_nans: bool = False  # weather to debug nans
@@ -116,22 +120,22 @@ defaults = [
 ]
 
 
-def get_mode():
-    if len(SWEEP.keys()) > 0:
-        return RunMode.MULTIRUN
-    return RunMode.RUN
+# def get_mode():
+#     if len(SWEEP.keys()) > 0:
+#         return RunMode.MULTIRUN
+#     return RunMode.RUN
 
 
 hydra_config = {
     # sets the out dir from config.problem and id
     "run": {
-        "dir": "outputs/${problem}/single/${name}"
+        "dir": "results/${problem}/single/${name}"
     },
     "sweep": {
-        "dir": "outputs/${problem}/multi/${name}"
+        "dir": "results/${problem}/multi/${name}"
     },
 
-    "mode": get_mode(),
+    # "mode": get_mode(),
     "sweeper": {
         "params": {
             **SWEEP

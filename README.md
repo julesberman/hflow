@@ -33,3 +33,7 @@ python hflow/run.py problem=osc
 ```
 python hflow/run.py problem=vlasov data.t_end=25
 ```
+To launch a sweep use `--multirun`
+```
+python hflow/run.py --multirun  problem=osc
+```

@@ -30,7 +30,7 @@ def build(cfg: Config):
 
     key = setup(cfg)
 
-    data = get_data(cfg.problem, cfg.data)
+    data = get_data(cfg.problem, cfg.data, key)
 
     s_fn, params_init = get_network(cfg, data, key)
 
