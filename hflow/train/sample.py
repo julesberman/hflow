@@ -22,18 +22,21 @@ def get_arg_fn(sample_cfg: Sample, data):
     bs_t = min(sample_cfg.bs_t, T)
     bs_n = min(sample_cfg.bs_n, N)
     sols = rearrange(sols, 'M T N D -> T M N D')
+    t_data = t_data / t_data[-1]
     if sample_cfg.scheme_t == 'gauss':
-        t_data = t_data / t_data[-1]
+      
         g_pts_01, quad_weights = gauss_quadrature_weights_points(bs_t, a=0.0, b=1.0)
 
         start, end = jnp.asarray([0]), jnp.asarray([1.0])
         g_pts_01 = jnp.concatenate([start, g_pts_01, end])
-   
+        # interp
+        sols = interplate_in_t(sols, t_data, g_pts_01)
+        t_data = g_pts_01
+
     elif sample_cfg.scheme_t == 'piece':
         
         pts_per_seg = bs_t
         segs = bs_t // pts_per_seg
-        t_data = t_data / t_data[-1]
         
         t_split = jnp.array_split(t_data, segs)
         quad_weights = []
@@ -47,17 +50,16 @@ def get_arg_fn(sample_cfg: Sample, data):
         start, end = jnp.asarray([0]), jnp.asarray([1.0])
         g_pts_01 = jnp.concatenate([start, *t_gauss, end])
         quad_weights = jnp.concatenate(quad_weights)
-        
-    elif sample_cfg.scheme_t == 'start':
-        
-        g_pts_01 = jnp.linspace(0.0, 1.0, bs_t+2)**4
 
+        # interp
+        sols = interplate_in_t(sols, t_data, g_pts_01)
+        t_data = g_pts_01
 
-    sols = interplate_in_t(sols, t_data, g_pts_01)
-    t_data = g_pts_01
+    elif sample_cfg.scheme_t == 'equi':
+        g_pts_01 = jnp.linspace(0.0, 1.0, bs_t+2)
+        sols = interplate_in_t(sols, t_data, g_pts_01)
+        t_data = g_pts_01
 
-
-    print(sols.shape)
     sols = rearrange(sols, 'T M N D -> M T N D')
        
                 
@@ -71,6 +73,11 @@ def get_data_fn(sols, mu_data, t_data, quad_weights, bs_n, bs_t, scheme_t, schem
     M, T, N, D = sols.shape
     t_data = t_data.reshape(-1, 1)
 
+    sols = jnp.asarray(sols)
+    mu_data = jnp.asarray(mu_data)
+    t_data = jnp.asarray(t_data)
+    quad_weights = jnp.asarray(quad_weights)
+    
     def args_fn(key):
 
         nonlocal sols

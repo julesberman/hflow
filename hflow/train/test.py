@@ -15,6 +15,8 @@ from hflow.io.utils import log
 
 def test_model(cfg: Config, data, s_fn, opt_params, key):
     test_cfg = cfg.test
+    if not test_cfg.run:
+        return None
     sol, mus, t = data
     t_int = np.linspace(0.0, 1.0, len(t))
     M, T, N, D = sol.shape

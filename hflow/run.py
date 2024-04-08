@@ -20,7 +20,6 @@ def run(cfg: Config) -> None:
     opt_params = train_model(
         cfg.optimizer, arg_fn, loss_fn, params_init, key)
 
-
     test_sol = test_model(cfg, data, s_fn, opt_params, key)
     
     save_results(R.RESULT, cfg)

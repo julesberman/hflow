@@ -39,6 +39,8 @@ def get_data(problem, data_cfg: Data, key):
         modes = 25
         sols = solve_sburgers_samples(n_samples, mus, N, sigma, modes, t_eval, key)
         sols = rearrange(sols, 'M N T D -> M T N D')
+     
+        
         sols = sols[:, :, :, ::2]
 
     log.info(f'train data (M x T x N x D) {sols.shape}')

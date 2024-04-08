@@ -38,10 +38,13 @@ def load_multi(problem, name, out_dir='./results'):
     for item in os.listdir(parent_dir):
         item_path = parent_dir / item
         if os.path.isdir(item_path) and item.isdigit():
-            row = pd.read_pickle(item_path / 'result.pkl')
-            rows.append(row)
-            cfg = OmegaConf.load(item_path / ".hydra/config.yaml")
-            cfgs.append(cfg)
+            try:
+                row = pd.read_pickle(item_path / 'result.pkl')
+                rows.append(row)
+                cfg = OmegaConf.load(item_path / ".hydra/config.yaml")
+                cfgs.append(cfg)
+            except:
+                print('did not load: ', item_path)
 
     df = pd.DataFrame(rows)
     return cfgs, df

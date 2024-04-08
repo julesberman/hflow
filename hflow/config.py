@@ -11,14 +11,14 @@ from hflow.misc.misc import epoch_time, unique_id
 # sweep configurationm, if empty will not sweep
 SWEEP = {}
 SWEEP = {
-    'optimizer.iters':'5_000,10_000,25_000,100_000',
-    'loss.sigma': '1e-1,1e-2,0.0',
-    'unet.width': '35,64,128',
-    'sample.scheme_n': 'rand,traj'
+    'optimizer.iters':'5_000,25_000,100_000',
+    'unet.width': '32,64,128',
+    # 'sample.bs_t': '8,16,32,64,128',
+    'sample.scheme_t': 'rand,gauss'
 }
 
 SLURM_CONFIG = {
-    'timeout_min': 60*6,
+    'timeout_min': 60*2,
     'cpus_per_task': 8,
     'mem_gb': 25,
     # 'gpus_per_node': 1,
@@ -30,7 +30,7 @@ SLURM_CONFIG = {
 class Network:
     model: str = 'dnn'
     width: int = 35
-    layers: List[str] = field(default_factory=lambda: ['P',*['C']*7])
+    layers: List[str] = field(default_factory=lambda: ['C']*7 )# ['P',*['C']*7])
     activation: str = 'swish'
     rank: int = 3
     full: bool = True
@@ -66,15 +66,17 @@ class Sample:
     bs_n: int = 128
     bs_t: int = 128
     scheme_t: str = 'gauss'
-    scheme_n: str = 'traj'
+    scheme_n: str = 'rand'
 
 
 @dataclass
 class Test:
+    run: bool = True
     dt:float = 1e-3
     n_samples: int = 25_000
     plot_samples: int = 2000
     plot:bool = True
+    
 
 @dataclass
 class Config:

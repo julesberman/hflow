@@ -21,7 +21,7 @@ def get_loss_fn(loss_cfg: Loss, s_fn):
     return loss_fn
 
 
-def Action_Match(s, noise=0.0, sigma=0.0):
+def Action_Match(s, noise=0.0, sigma=0.0, return_interior=False):
 
     def s_sep(mu, t, x, params):
         mu_t = jnp.concatenate([mu, t])
@@ -77,10 +77,13 @@ def Action_Match(s, noise=0.0, sigma=0.0):
         interior = vmap(interior_loss)(xt_tensor)
 
         if quad_weights is not None:
-            interior *= quad_weights
+            interior_w = interior * quad_weights
 
-        loss = (bound.mean() + interior.sum())
+        loss = (bound.mean() + interior_w.sum())
 
+        if return_interior:
+            return loss, interior
+        
         return loss
 
     return am_loss
