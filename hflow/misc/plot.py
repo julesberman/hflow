@@ -166,7 +166,7 @@ def scatter_movie(pts, c='r', size=None, xlim=None, ylim=None, alpha=1, frames=6
     sct = ax.scatter(x=pts[0, 0], y=pts[0, 1], alpha=alpha, s=size, c=c)
     mm = pts.min(axis=(0, 2))
     mx = pts.max(axis=(0, 2))
-    
+
     if xlim is None:
         xlim = [mm[0], mx[0]]
     if ylim is None:
@@ -201,7 +201,7 @@ def scatter_movie(pts, c='r', size=None, xlim=None, ylim=None, alpha=1, frames=6
         return HTML(ani.to_jshtml())
 
 
-def line_movie(sol, frames=50, t=None, x=None, color=None, title='', interval=100, ylim=None, save_to=None, show=True, legend=None, tight=False):
+def line_movie(sol, frames=50, t=None, x=None, color=None, title='', interval=100, ylim=None, save_to=None, show=True, legend=None, tight=False, fps=10):
     sol = np.asarray(sol)
     if len(sol.shape) == 2:
         sol = np.expand_dims(sol, axis=0)
@@ -248,7 +248,7 @@ def line_movie(sol, frames=50, t=None, x=None, color=None, title='', interval=10
     plt.close()
     if save_to is not None:
         p = Path(save_to).with_suffix('.gif')
-        ani.save(p, writer='pillow', fps=30)
+        ani.save(p, writer='pillow', fps=fps)
 
     if show:
         return HTML(ani.to_jshtml())
