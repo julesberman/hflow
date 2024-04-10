@@ -29,7 +29,7 @@ SLURM_CONFIG = {
 @dataclass
 class Network:
     model: str = 'dnn'
-    width: int = 35
+    width: int = 32
     layers: List[str] = field(default_factory=lambda: [
                               'C']*7)  # ['P',*['C']*7])
     activation: str = 'swish'
@@ -111,11 +111,10 @@ class Config:
     hydra: Any = field(default_factory=lambda: hydra_config)
     defaults: List[Any] = field(default_factory=lambda: defaults)
 
+
 ##########################
 ## hydra settings stuff ##
 ##########################
-
-
 defaults = [
     # https://hydra.cc/docs/tutorials/structured_config/defaults/
     # "_self_",
@@ -166,6 +165,12 @@ hydra_config = {
     }
 }
 
+
+##################################
+## problem wise default configs ##
+##################################
+
+
 cs = ConfigStore.instance()
 cs.store(name="default", node=Config)
 
@@ -174,4 +179,16 @@ vlasov_config = Config(problem='vlasov',
                        unet=Network(layers=['P', *['C']*7]))
 
 
+osc_config = Config(problem='osc',
+                    data=Data(t_end=15))
+
+
+sburgers_config = Config(problem='sburgers',
+                         data=Data(t_end=4, n_samples=512),
+                         test=Test(n_samples=25),
+                         unet=Network(width=64))
+
+
+cs.store(name="osc", node=osc_config)
 cs.store(name="vlasov", node=vlasov_config)
+cs.store(name="sburgers", node=sburgers_config)

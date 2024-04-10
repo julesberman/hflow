@@ -27,13 +27,22 @@ jaxlib==0.4.23
 
 ## Running
 
+Run a problem will all default settings
 ```
 python hflow/run.py problem=osc
 ```
+
+Run a problem with problem specific default settings (recommended)
 ```
-python hflow/run.py problem=vlasov data.t_end=25
+python hflow/run.py -cn=vlasov
 ```
+
+Run a problem with problem specific default settings and overrides
+```
+python hflow/run.py -cn=vlasov data.t_end=10 optimizer.iters=100_000    
+```
+
 To launch a sweep use `--multirun`
 ```
-python hflow/run.py --multirun  problem=osc
+python hflow/run.py --multirun -cn=vlasov 
 ```

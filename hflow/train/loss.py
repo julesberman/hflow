@@ -1,4 +1,3 @@
-from functools import partial
 
 import jax
 import jax.numpy as jnp
@@ -7,9 +6,8 @@ from jax import grad, jacfwd, jacrev, jit, jvp, vmap
 from jax.experimental.host_callback import id_print
 
 from hflow.config import Loss
-from hflow.misc.jax import get_rand_idx, hess_trace_estimator
-from hflow.misc.vmap_chunked import vmap_chunked
-from functools import partial
+from hflow.misc.jax import hess_trace_estimator
+
 
 def get_loss_fn(loss_cfg: Loss, s_fn):
 
@@ -26,7 +24,6 @@ def Action_Match(s, noise=0.0, sigma=0.0, return_interior=False):
     def s_sep(mu, t, x, params):
         mu_t = jnp.concatenate([mu, t])
         return s(mu_t, x, params)
-
 
     s_dt = jacrev(s_sep, 1)
     s_dt_Vx = vmap(s_dt, (None, None, 0, None))
@@ -60,7 +57,7 @@ def Action_Match(s, noise=0.0, sigma=0.0, return_interior=False):
             mu, t = mu_t[:1], mu_t[1:]
             ut = s_dt_Vx(mu, t, x_batch, params)
             ut = jnp.squeeze(ut)
-            
+
             # entropic
             if sigma > 0.0:
                 gu, trace_ets = trace_dds_Vx(key, mu_t, x_batch, params)
@@ -69,9 +66,8 @@ def Action_Match(s, noise=0.0, sigma=0.0, return_interior=False):
                 gu = s_dx_Vx(mu_t, x_batch, params)
                 ent = 0.0
 
-       
             gu = 0.5*jnp.sum(gu**2, axis=1)
-     
+
             return (ut+gu+ent).mean()
 
         interior = vmap(interior_loss)(xt_tensor)
@@ -83,7 +79,7 @@ def Action_Match(s, noise=0.0, sigma=0.0, return_interior=False):
 
         if return_interior:
             return loss, interior
-        
+
         return loss
 
     return am_loss

@@ -1,8 +1,7 @@
-from typing import List, Optional
+from typing import Any, List, Optional
 
 import jax.numpy as jnp
 from jax.flatten_util import ravel_pytree
-from jax.random import KeyArray
 
 from hflow.net.networks import DNN
 from hflow.net.utils import init_net, merge, split
@@ -19,7 +18,7 @@ def build_colora(
     rank: int = 1,
     full: bool = False,
     bias: bool = True,
-    key: Optional[KeyArray] = None
+    key: Any = None
 ):
     """Function to set up the full CoLoRA architecture both the hypernetwork given by h and the reduce model given by u_hat
 
