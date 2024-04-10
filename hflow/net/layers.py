@@ -2,6 +2,7 @@
 from typing import Callable, Optional
 
 import flax.linen as nn
+import jax
 import jax.numpy as jnp
 from flax.linen import initializers
 
@@ -77,30 +78,40 @@ class CoLoRA(nn.Module):
         return out
 
 
-# class Gaussian(nn.Module):
+class Rational(nn.Module):
+    """
+    Rational activation function
+    ref: Nicolas Boullé, Yuji Nakatsukasa, and Alex Townsend,
+        Rational neural networks,
+        arXiv preprint arXiv:2004.01902 (2020).
 
-#     width: int
-#     period: Optional[jnp.ndarray]
-#     param_dtype = jnp.float32
-#     use_bias: bool = True
-#     w_init: Callable = initializers.lecun_normal()
+    Source: https://github.com/yonesuke/RationalNets/blob/main/src/rationalnets/rational.py
 
-#     @nn.compact
-#     def __call__(self, x):
-#         dim, n_gaussians = x.shape[-1], self.width
-#         w_init = self.w_init
+    """
+    p = 3
 
-#         W = self.param('W', w_init, (D, n_gaussians), self.param_dtype)
+    @nn.compact
+    def __call__(self, x):
+        alpha_init = lambda *args: jnp.array(
+            [1.1915, 1.5957, 0.5, 0.0218][:self.p+1])
+        beta_init = lambda *args: jnp.array([2.383, 0.0, 1.0][:self.p])
+        alpha = self.param("alpha", init_fn=alpha_init)
+        beta = self.param("beta", init_fn=beta_init)
 
-#         a = self.param('a', w_init, (f, dim), self.param_dtype)
-#         phi = self.param('c', w_init, (f, dim), self.param_dtype)
+        return jnp.polyval(alpha, x)/jnp.polyval(beta, x)
 
-#         omeg = jnp.pi*2/period
-#         o = a*jnp.cos(omeg*x+phi)
-#         if self.use_bias:
-#             b = self.param('b', w_init, (f, dim), self.param_dtype)
-#             o += b
 
-#         o = jnp.mean(o, axis=1)
+class Siren(nn.Module):
+    omega: float = 1.0
 
-#         return o
+    @nn.compact
+    def __call__(self, x):
+
+        return jnp.sin(self.omega * x)
+
+
+class Lipswish(nn.Module):
+
+    @nn.compact
+    def __call__(self, x):
+        return 0.909 * jax.nn.silu(x)

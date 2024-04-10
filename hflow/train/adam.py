@@ -13,6 +13,7 @@ str_to_opt = {
     'adamww': partial(optax.adamw, weight_decay=1e-3),
     'amsgrad':  optax.amsgrad,
     'adabelief': optax.adabelief,
+    'adadelta': optax.adadelta,
 }
 
 
@@ -76,5 +77,5 @@ def adam_opt(theta_init, loss_fn, args_fn, init_state=None, steps=1000, learning
     loss_history = np.asarray(loss_history)
     if return_params:
         return params, opt_params, loss_history, param_history
-    
+
     return params, opt_params, loss_history

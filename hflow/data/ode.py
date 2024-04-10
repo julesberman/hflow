@@ -43,3 +43,19 @@ def odeint_rk4_key(fn, y0, t, key, lambda_fn=lambda x, k: x):
     (yf, _, _), y = jax.lax.scan(rk4, (y0, jnp.array(t[0]), key), t[1:])
     y = jnp.insert(y, 0, y0, axis=0)  # prepend y0
     return y
+
+
+def odeint_euler_key(fn, y0, t, key, lambda_fn=lambda x: x):
+    @jit
+    def rk4(carry, t):
+        y, t_prev, key = carry
+        h = t - t_prev
+        key, subkey = jax.random.split(key)
+        k1 = fn(t_prev, y, subkey)
+        y = y + h * k1
+        yd = lambda_fn(y)
+        return (y, t, key), yd
+
+    (yf, _, _), y = jax.lax.scan(rk4, (y0, jnp.array(t[0]), key), t)
+
+    return y

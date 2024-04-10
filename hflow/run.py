@@ -6,10 +6,10 @@ from hflow.data.get import get_data
 from hflow.io.save import save_results
 from hflow.io.setup import setup
 from hflow.net.get import get_network
+from hflow.test.test import test_model
 from hflow.train.loss import get_loss_fn
 from hflow.train.sample import get_arg_fn
 from hflow.train.train import train_model
-from hflow.train.test import test_model
 
 
 @hydra.main(version_base=None, config_name="default")
@@ -21,7 +21,7 @@ def run(cfg: Config) -> None:
         cfg.optimizer, arg_fn, loss_fn, params_init, key)
 
     test_sol = test_model(cfg, data, s_fn, opt_params, key)
-    
+
     save_results(R.RESULT, cfg)
 
 
@@ -42,4 +42,3 @@ def build(cfg: Config):
 if __name__ == "__main__":
 
     run()
-
