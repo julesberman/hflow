@@ -39,7 +39,7 @@ def test_model(cfg: Config, data, s_fn, opt_params, key):
         compute_metrics(test_cfg, true_sol, test_sol, mu_i)
 
         plot_test(test_cfg, true_sol, test_sol,
-                  t_int, test_cfg.plot_samples, mu_i)
+                  t_int, test_cfg.n_plot_samples, mu_i)
 
     return test_sol
 

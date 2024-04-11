@@ -36,7 +36,7 @@ class DNN(nn.Module):
             if not is_last:
                 x = A(x)
 
-        if self.last_activation is not None:
+        if self.last_activation is not None and self.last_activation is not 'none':
             x = get_activation(self.last_activation)(x)
 
         if self.squeeze:

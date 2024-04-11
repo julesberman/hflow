@@ -35,11 +35,13 @@ def get_data(problem, data_cfg: Data, key):
         sols = vmap(jit(solve_for_mu))(mus)
         sols = rearrange(sols, 'M N T D -> M T N D')
     elif problem == 'sburgers':
-        mus = np.asarray([1e-3, 5e-3, 1e-2])
+        mus = np.asarray([2e-3, 5e-3, 1e-2])
         N = 256
-        sub_N = 4
+        sub_N = N // data_cfg.n_dim
         sigma = 1e-1
         modes = 100
+        R.RESULT['sburgers_modes'] = modes
+        R.RESULT['sburgers_sigma'] = sigma
         sols = solve_sburgers_samples(
             n_samples, mus, N, sub_N, sigma, modes, t_eval, key)
         sols = rearrange(sols, 'M N T D -> M T N D')

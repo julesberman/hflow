@@ -24,6 +24,8 @@ def load_single(problem, name, out_dir='./results'):
     df = None
     if os.path.isfile(res_path):
         df = pd.read_pickle(res_path)
+    else:
+        print('no file ', file_path)
 
     return cfg, df
 

@@ -34,7 +34,7 @@ def get_colora(unet: Network, hnet: Network, data, key):
     h_config = {'width': hnet.width, 'layers': hnet.layers}
 
     u_fn, h_fn, theta_init, psi_init = build_colora(
-        u_config, h_config, x_dim, mu_t_dim, u_dim, 
+        u_config, h_config, x_dim, mu_t_dim, u_dim,
         period=period, rank=rank, key=key, full=unet.full, bias=unet.bias)
 
     psi_theta_init = (psi_init, theta_init)

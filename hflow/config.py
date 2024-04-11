@@ -11,10 +11,11 @@ from hflow.misc.misc import epoch_time, unique_id
 # sweep configurationm, if empty will not sweep
 SWEEP = {}
 SWEEP = {
-    'optimizer.iters': '5_000,25_000,100_000',
-    'unet.width': '32,64,128',
+    'optimizer.iters': '100_000',
+    # 'unet.width': '32,64,128',
     # 'sample.bs_t': '8,16,32,64,128',
-    'sample.scheme_t': 'rand,gauss'
+    'sample.scheme_t': 'rand,gauss',
+    'unet.last_activation': 'tanh'
 }
 
 SLURM_CONFIG = {
@@ -36,7 +37,7 @@ class Network:
     rank: int = 3
     full: bool = True
     bias: bool = True
-    last_activation: Union[str, None] = None
+    last_activation: Union[str, None] = 'none'
 
 
 @dataclass
@@ -53,6 +54,7 @@ class Data:
     dt: float = 5e-3
     t_end: int = 10
     n_samples: int = 20_000
+    n_dim: int = 128
     normalize: bool = True
 
 
@@ -75,9 +77,14 @@ class Sample:
 class Test:
     run: bool = True
     dt: float = 1e-3
-    n_samples: int = 25_000
-    plot_samples: int = 2000
-    plot: bool = True
+    n_time_pts: int = 32
+    n_samples: int = 10_000
+    n_plot_samples: int = 2000
+    plot_particles: bool = False
+    plot_hist: bool = False
+    plot_func: bool = False
+    w_eps: float = 0.1
+    noise_type: str = 'rand'
 
 
 @dataclass
@@ -176,7 +183,8 @@ cs.store(name="default", node=Config)
 
 vlasov_config = Config(problem='vlasov',
                        data=Data(t_end=30),
-                       unet=Network(layers=['P', *['C']*7]))
+                       unet=Network(layers=['P', *['C']*7]),
+                       test=Test(n_plot_samples=5000, plot_hist=True))
 
 
 osc_config = Config(problem='osc',
@@ -184,8 +192,10 @@ osc_config = Config(problem='osc',
 
 
 sburgers_config = Config(problem='sburgers',
-                         data=Data(t_end=4, n_samples=512),
-                         test=Test(n_samples=25),
+                         data=Data(t_end=3, n_samples=512,
+                                   dt=5e-4, normalize=False),
+                         test=Test(n_samples=25, n_plot_samples=25,
+                                   plot_func=True, w_eps=0.005),
                          unet=Network(width=64))
 
 

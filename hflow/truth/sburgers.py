@@ -9,21 +9,21 @@ from jax import jit, vmap
 from hflow.data.ode import odeint_euler_key
 
 
-def get_f_besov_x(key, x_space, K, s=1.0, kappa=4.0, p=2):
+def get_f_besov_x(key, x_space, modes, s=1.0, kappa=4.0, p=2):
     d = 1
     pi = jnp.pi
     L = x_space[-1] - x_space[0]
     u0 = 0.0
-    xi_k = jax.random.normal(key, shape=(2*K,))
+    xi_k = jax.random.normal(key, shape=(2*modes,))
 
     def sin(k):
         return jnp.sin(2*pi*k*x_space/L) * jnp.sqrt(2/L)
 
     def cos(k):
         return jnp.cos(2*pi*k*x_space/L) * jnp.sqrt(2/L)
-    for k in range(1, K):
+    for k in range(1, modes):
         u0 += (k**(-s/d-1/p+1/2) * kappa**(-1/p)) * \
-            (xi_k[k-1] * cos(k) + xi_k[k-1+K] * sin(k))
+            (xi_k[k-1] * cos(k) + xi_k[k-1+modes] * sin(k))
     return u0
 
 

@@ -1,12 +1,11 @@
 import random
 
 import flax
+import haiku as hk
 import jax
 import jax.numpy as jnp
 from jax import vmap
 from jax.flatten_util import ravel_pytree
-
-from hflow.misc.partition import merge, partition
 
 
 def init_net(net, input_dim, key=None):
@@ -46,7 +45,7 @@ def split(theta_phi, filter_list):
         return leaf_key in filter_list
 
     _, theta_phi = flax.core.pop(theta_phi, 'params')
-    phi, theta = partition(filter_rn, theta_phi)
+    phi, theta = hk.data_structures.partition(filter_rn, theta_phi)
 
     phi = {'params': phi}
     theta = {'params': theta}
@@ -54,6 +53,6 @@ def split(theta_phi, filter_list):
 
 
 def merge(phi, theta):
-    theta_phi = merge(phi['params'], theta['params'])
+    theta_phi = hk.data_structures.merge(phi['params'], theta['params'])
     theta_phi = {'params': theta_phi}
     return theta_phi
