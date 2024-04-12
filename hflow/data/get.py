@@ -38,8 +38,8 @@ def get_data(problem, data_cfg: Data, key):
         mus = np.asarray([2e-3, 5e-3, 1e-2])
         N = 256
         sub_N = N // data_cfg.n_dim
-        sigma = 1e-1
-        modes = 100
+        sigma = 5e-2
+        modes = 75
         R.RESULT['sburgers_modes'] = modes
         R.RESULT['sburgers_sigma'] = sigma
         sols = solve_sburgers_samples(

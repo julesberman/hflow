@@ -9,7 +9,7 @@ from jax import jit, vmap
 from hflow.data.ode import odeint_euler_key
 
 
-def get_f_besov_x(key, x_space, modes, s=1.0, kappa=4.0, p=2):
+def get_f_besov_x(key, x_space, modes, s=1.0, kappa=1.0, p=2):
     d = 1
     pi = jnp.pi
     L = x_space[-1] - x_space[0]

@@ -15,7 +15,7 @@ from hflow.io.utils import log
 def compute_metrics(test_cfg: Test, true_sol, test_sol, mu_i):
     # shape is T N D
     T, N, D = true_sol.shape
-    idx = np.linspace(0, T-1, test_cfg.n_time_pts,
+    idx = np.linspace(1, T-1, test_cfg.n_time_pts,
                       endpoint=True, dtype=np.int32)
     true_sol = true_sol[idx]
     test_sol = test_sol[idx]

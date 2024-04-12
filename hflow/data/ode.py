@@ -59,3 +59,19 @@ def odeint_euler_key(fn, y0, t, key, lambda_fn=lambda x: x):
     (yf, _, _), y = jax.lax.scan(rk4, (y0, jnp.array(t[0]), key), t)
 
     return y
+
+
+def odeint_euler_maruyama(drift_fn, diff_fn, y0, t, key):
+    @jit
+    def rk4(carry, t):
+        y, t_prev, key = carry
+        dt = t - t_prev
+        key, subkey = jax.random.split(key)
+        drift = drift_fn(t_prev, y)
+        diff = diff_fn(t_prev, y, subkey)
+        y = y + dt * drift + jnp.sqrt(dt)*diff
+        return (y, t, key), y
+
+    (yf, _, _), y = jax.lax.scan(rk4, (y0, jnp.array(t[0]), key), t)
+
+    return y

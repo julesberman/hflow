@@ -11,11 +11,11 @@ from hflow.misc.misc import epoch_time, unique_id
 # sweep configurationm, if empty will not sweep
 SWEEP = {}
 SWEEP = {
-    'optimizer.iters': '100_000',
-    # 'unet.width': '32,64,128',
+    'optimizer.iters': '5000,25_000,100_000',
+    'unet.width': '32,64,128',
     # 'sample.bs_t': '8,16,32,64,128',
     'sample.scheme_t': 'rand,gauss',
-    'unet.last_activation': 'tanh'
+    'unet.last_activation': 'tanh,none'
 }
 
 SLURM_CONFIG = {
@@ -63,12 +63,13 @@ class Loss:
     loss_fn: str = 'am'
     noise: float = 0.0
     sigma: float = 1e-1
+    log: bool = False
 
 
 @dataclass
 class Sample:
     bs_n: int = 128
-    bs_t: int = 128
+    bs_t: int = 200
     scheme_t: str = 'gauss'
     scheme_n: str = 'rand'
 
@@ -83,8 +84,8 @@ class Test:
     plot_particles: bool = False
     plot_hist: bool = False
     plot_func: bool = False
-    w_eps: float = 0.1
-    noise_type: str = 'rand'
+    w_eps: float = 0.01
+    noise_type: str = 'sde'
 
 
 @dataclass
@@ -182,9 +183,9 @@ cs = ConfigStore.instance()
 cs.store(name="default", node=Config)
 
 vlasov_config = Config(problem='vlasov',
-                       data=Data(t_end=30),
-                       unet=Network(layers=['P', *['C']*7]),
-                       test=Test(n_plot_samples=5000, plot_hist=True))
+                       data=Data(t_end=40),
+                       unet=Network(width=64, layers=['P', *['C']*7]),
+                       test=Test(n_plot_samples=10_000, plot_hist=True))
 
 
 osc_config = Config(problem='osc',
@@ -195,7 +196,7 @@ sburgers_config = Config(problem='sburgers',
                          data=Data(t_end=3, n_samples=512,
                                    dt=5e-4, normalize=False),
                          test=Test(n_samples=25, n_plot_samples=25,
-                                   plot_func=True, w_eps=0.005),
+                                   plot_func=True, w_eps=0.005, noise_type='spde'),
                          unet=Network(width=64))
 
 
