@@ -20,7 +20,7 @@ SWEEP = {
 
 SLURM_CONFIG = {
     'timeout_min': 60*2,
-    'cpus_per_task': 8,
+    'cpus_per_task': 4,
     'mem_gb': 25,
     # 'gpus_per_node': 1,
     'gres': 'gpu'
@@ -43,7 +43,7 @@ class Network:
 @dataclass
 class Optimizer:
     lr: float = 5e-3
-    iters: int = 2_000
+    iters: int = 5_000
     scheduler: bool = True
     optimizer: str = 'adamw'
 
@@ -69,7 +69,7 @@ class Loss:
 @dataclass
 class Sample:
     bs_n: int = 128
-    bs_t: int = 200
+    bs_t: int = 128
     scheme_t: str = 'gauss'
     scheme_n: str = 'rand'
 
@@ -189,13 +189,18 @@ vlasov_config = Config(problem='vlasov',
 
 
 osc_config = Config(problem='osc',
-                    data=Data(t_end=15))
+                    data=Data(t_end=15),
+                    unet=Network(width=64, layers=[
+                                 'C']*7, last_activation='tanh'),
+                    hnet=Network(width=15, layers=[
+                                 'P', *['C']*3], last_activation='tanh'),
+                    test=Test(plot_particles=True))
 
 
 sburgers_config = Config(problem='sburgers',
-                         data=Data(t_end=3, n_samples=512,
+                         data=Data(t_end=3, n_samples=256,
                                    dt=5e-4, normalize=False),
-                         test=Test(n_samples=25, n_plot_samples=25,
+                         test=Test(n_samples=8, n_plot_samples=8,
                                    plot_func=True, w_eps=0.005, noise_type='spde'),
                          unet=Network(width=64))
 

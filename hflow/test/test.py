@@ -86,7 +86,8 @@ def solve_test_spde(s_fn, params, ics, t_int, sigma, mu, key):
 
     test_sol = []
     for ic in ics:
-        y = odeint_euler_maruyama(diffusion, drift, ic, t_int, key)
+        key, skey = jax.random.split(key)
+        y = odeint_euler_maruyama(drift, diffusion, ic, t_int, skey)
         test_sol.append(y)
 
     test_sol = rearrange(test_sol, 'N T D -> T N D')

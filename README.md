@@ -34,7 +34,7 @@ python hflow/run.py problem=osc
 
 Run a problem with problem specific default settings (recommended)
 ```
-python hflow/run.py -cn=sburgers
+python hflow/run.py -cn=osc
 ```
 
 Run a problem with problem specific default settings and overrides

@@ -19,7 +19,11 @@ class Periodic(nn.Module):
     def __call__(self, x):
         dim, f = x.shape[-1], self.width
         w_init = self.w_init
-        period = jnp.asarray(self.period)
+        if self.period is None:
+            period = self.param('period', w_init,
+                                (f, dim,), self.param_dtype)
+        else:
+            period = jnp.asarray(self.period)
 
         a = self.param('a', w_init, (f, dim), self.param_dtype)
         phi = self.param('c', w_init, (f, dim), self.param_dtype)
