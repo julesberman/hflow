@@ -64,14 +64,6 @@ def compute_wasserstein(A, B, eps):
 
 
 def compute_wasserstein_over_D(A, B, eps):
-
-    print(A.shape, B.shape)
-    # A_B = jnp.stack([A, B], axis=1)
-    # print(A_B.shape)
-
-    # def compute(A_B):
-    #     A, B = A_B
-    #     return compute_wasserstein(A, B, eps)
     T = len(A)
     compute = jit(compute_wasserstein)
 

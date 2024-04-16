@@ -43,7 +43,7 @@ class Network:
 @dataclass
 class Optimizer:
     lr: float = 5e-3
-    iters: int = 5_000
+    iters: int = 25_000
     scheduler: bool = True
     optimizer: str = 'adamw'
 
@@ -185,7 +185,7 @@ cs = ConfigStore.instance()
 cs.store(name="default", node=Config)
 
 vlasov_config = Config(problem='vtwo',
-                       data=Data(t_end=40, n_samples=20_000, dt=1e-2),
+                       data=Data(t_end=45, n_samples=20_000, dt=1e-2),
                        unet=Network(width=64, layers=['P', *['C']*7]),
                        test=Test(n_plot_samples=10_000, plot_hist=True))
 
