@@ -1,3 +1,6 @@
+import os
+from pathlib import Path
+
 import numpy as np
 from einops import rearrange
 from jax import jit, vmap
@@ -9,11 +12,13 @@ from hflow.data.particles import (get_2d_bi, get_2d_lin, get_2d_van, get_ic_bi,
 from hflow.data.sde import solve_sde
 from hflow.data.utils import normalize
 from hflow.data.vlasov import run_vlasov
-from hflow.io.utils import log
+from hflow.io.utils import log, save_pickle
 from hflow.truth.sburgers import solve_sburgers_samples
 
 
 def get_data(problem, data_cfg: Data, key):
+
+    log.info(f'getting data...')
 
     n_samples = data_cfg.n_samples
     dt, t_end = data_cfg.dt, data_cfg.t_end
@@ -21,13 +26,19 @@ def get_data(problem, data_cfg: Data, key):
 
     sols = []
 
-    if problem == 'vlasov':
-        mus = np.asarray([0.1, 0.15, 0.2])
+    if problem == 'vbump':
+        mus = np.asarray([0.5, 1.0, 1.5])
         for mu in mus:
-            res = run_vlasov(n_samples//2, t_eval, mu)
+            res = run_vlasov(n_samples, t_eval, mu, mode='bump-on-tail')
             sols.append(res)
         sols = np.asarray(sols)
-    elif problem == 'osc':
+    elif problem == 'vtwo':
+        mus = np.asarray([0.5, 1.0, 1.5])
+        for mu in mus:
+            res = run_vlasov(n_samples, t_eval, mu, mode='two-stream')
+            sols.append(res)
+        sols = np.asarray(sols)
+    elif problem == 'bi':
         mus = np.asarray([0.15, 0.1, 0.05])
 
         def solve_for_mu(mu):
@@ -45,7 +56,7 @@ def get_data(problem, data_cfg: Data, key):
         sols = vmap(jit(solve_for_mu))(mus)
         sols = rearrange(sols, 'M N T D -> M T N D')
     elif problem == 'van':
-        mus = np.asarray([0.10, 0.05, 0.0])
+        mus = np.asarray([0.0, 0.5, 1.0, 1.5, 2.0])
 
         def solve_for_mu(mu):
             drift, diffusion = get_2d_van(mu)
@@ -69,10 +80,26 @@ def get_data(problem, data_cfg: Data, key):
     R.RESULT['t_eval'] = t_eval
     R.RESULT['sols'] = sols
 
-    sols, mu, t = normalize_dataset(sols, mus, t_eval, data_cfg.normalize)
-    data = (sols, mu, t)
+    if data_cfg.save:
+        save_data(problem, sols, mus, t_eval)
+
+    sols, mus, t_eval = normalize_dataset(
+        sols, mus, t_eval, data_cfg.normalize)
+    data = (sols, mus, t_eval)
 
     return data
+
+
+def save_data(problem, sols, mu, t):
+    sol32 = np.asarray(sols, dtype=np.float32)
+    t32 = np.asarray(t, dtype=np.float32)
+    mu32 = np.asarray(mu, dtype=np.float32)
+    data = {'sols': sol32, 'mu': mu32, 't': t32}
+    wd = Path(os.getcwd())
+    output_dir = wd / 'ground_truth' / 'sde'
+    output_dir.mkdir(exist_ok=True, parents=True)
+    output_dir = (output_dir / problem).with_suffix(".pkl")
+    save_pickle(output_dir, data)
 
 
 def normalize_dataset(sols, mus, t_eval, normalize_data):

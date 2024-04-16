@@ -46,13 +46,10 @@ def get_2d_lin(mu):
 
 
 def get_ic_van(key):
-    mu_0 = jnp.asarray([4, 4])
+    mu_0 = jnp.asarray([0, 1])
     ic = jax.random.normal(key, (2,))
     ic = (ic*0.5) - mu_0
     return ic
-
-# a*(x1^b)*(x2^c)
-# 0.1,0,1
 
 
 def get_2d_van(mu):
