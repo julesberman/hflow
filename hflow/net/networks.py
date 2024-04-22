@@ -5,7 +5,8 @@ import flax.linen as nn
 import jax
 import jax.numpy as jnp
 
-from hflow.net.layers import CoLoRA, Lipswish, Periodic, Rational, Siren
+from hflow.net.layers import (CoLoRA, Fourier_Random, Lipswish, Periodic,
+                              Rational, Siren)
 
 
 class DNN(nn.Module):
@@ -36,7 +37,7 @@ class DNN(nn.Module):
             if not is_last:
                 x = A(x)
 
-        if self.last_activation is not None and self.last_activation is not 'none':
+        if self.last_activation is not None and self.last_activation != 'none':
             x = get_activation(self.last_activation)(x)
 
         if self.squeeze:
@@ -51,6 +52,8 @@ def get_layer(layer, width, period=None, rank=1, full=False, bias=True):
         L = Periodic(width, period=period, use_bias=bias)
     elif layer == 'C':
         L = CoLoRA(width, rank, full, use_bias=bias)
+    elif layer == 'F':
+        L = Fourier_Random(width, variance=period)
     else:
         raise Exception(f"unknown layer: {layer}")
     return L
@@ -78,5 +81,5 @@ def get_activation(activation):
     elif activation == 'hswish':
         a = jax.nn.hard_swish
     elif activation == 'lipswish':
-        return Lipswish
+        return Lipswish()
     return a

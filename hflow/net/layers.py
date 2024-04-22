@@ -119,3 +119,24 @@ class Lipswish(nn.Module):
     @nn.compact
     def __call__(self, x):
         return 0.909 * jax.nn.silu(x)
+
+
+class Fourier_Random(nn.Module):
+
+    features: int
+    param_dtype = jnp.float32
+    variance: int = None
+
+    @nn.compact
+    def __call__(self, x):
+        f, dim = self.features, x.shape[-1]
+
+        key = jax.random.PRNGKey(1)
+        R = jax.random.truncated_normal(
+            key, upper=10, lower=-10, shape=(f, dim))
+        R = R * self.variance
+        fs = f//2
+
+        s = jnp.sin(R[:fs] @ x)
+        c = jnp.cos(R[fs:] @ x)
+        return jnp.concatenate([s, c])
