@@ -7,6 +7,21 @@ import jax.numpy as jnp
 from jax import jit
 
 
+def odeint_euler(fn, y0, t, lambda_fn=lambda x: x):
+    @jit
+    def rk4(carry, t):
+        y, t_prev = carry
+        h = t - t_prev
+        k1 = fn(t_prev, y)
+        y = y + h * k1
+        yd = lambda_fn(y)
+        return (y, t), yd
+
+    (yf, _), y = jax.lax.scan(rk4, (y0, jnp.array(t[0])), t)
+
+    return y
+
+
 def odeint_rk4(fn, y0, t, downsampler=lambda x: x):
     @jit
     def rk4(carry, t):
@@ -63,7 +78,7 @@ def odeint_euler_key(fn, y0, t, key, lambda_fn=lambda x: x):
 
 def odeint_euler_maruyama(drift_fn, diff_fn, y0, t, key):
     @jit
-    def rk4(carry, t):
+    def em_fn(carry, t):
         y, t_prev, key = carry
         dt = t - t_prev
         key, subkey = jax.random.split(key)
@@ -72,6 +87,6 @@ def odeint_euler_maruyama(drift_fn, diff_fn, y0, t, key):
         y = y + dt * drift + jnp.sqrt(dt)*diff
         return (y, t, key), y
 
-    (yf, _, _), y = jax.lax.scan(rk4, (y0, jnp.array(t[0]), key), t)
+    (yf, _, _), y = jax.lax.scan(em_fn, (y0, jnp.array(t[0]), key), t)
 
     return y
