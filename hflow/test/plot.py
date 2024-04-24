@@ -50,6 +50,9 @@ def plot_test(test_cfg: Test, true_sol, test_sol, t_int, n_plot, mu_i):
             hist_sol = get_hist(test_sol[idx_time])
             imshow_movie(hist_sol, t=t_int[idx_time], show=False,
                          frames=frames, save_to=f'{outdir}/test_hist_{mu_i}.gif')
+            hist_sol = get_hist(true_sol[idx_time])
+            imshow_movie(hist_sol, t=t_int[idx_time], show=False,
+                         frames=frames, save_to=f'{outdir}/true_hist_{mu_i}.gif')
         except Exception as e:
             log.error(e, "could not plot hist")
 

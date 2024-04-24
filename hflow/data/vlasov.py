@@ -37,6 +37,8 @@ Calculate the acceleration on each particle due to electric field
     weight_j = (jp1*dx - pos)/dx
     weight_jp1 = (pos - j*dx)/dx
     jp1 = np.mod(jp1, Nx)   # periodic BC
+    j = np.mod(j, Nx)   # periodic BC ensures no crash
+
     n = np.bincount(j[:, 0],   weights=weight_j[:, 0],   minlength=Nx)
     n += np.bincount(jp1[:, 0], weights=weight_jp1[:, 0], minlength=Nx)
     n *= n0 * boxsize / N / dx
@@ -89,7 +91,7 @@ def get_laplacian_matrix(Nx, boxsize):
 
 
 def run_vlasov(n_samples, t_eval, mu=1.0, mode='two-stream'):
-
+    np.random.seed(1)
     dt = t_eval[1] - t_eval[0]
     Nt = len(t_eval)
 

@@ -11,15 +11,19 @@ from hflow.misc.misc import epoch_time, unique_id
 # sweep configurationm, if empty will not sweep
 SWEEP = {}
 SWEEP = {
-    'optimizer.iters': '5000,25_000,100_000',
-    'unet.width': '32,64,128',
-    # 'sample.bs_t': '8,16,32,64,128',
-    'sample.scheme_t': 'rand,gauss',
-    'unet.last_activation': 'tanh,none'
+    'problem': 'vbump,vtwo',
+    'optimizer.iters': '25_000',
+    'sample.bs_t': '256',
+    'sample.bs_n': '256',
+    'unet.activation': 'swish,lipswish,sin',
+    'unet.layers': f"{['P', *['C']*7]},{['P', *['F']*7]}",
+    # 'unet.full': "True,False"
+    # 'sample.scheme_t': 'rand,gauss',
+    # 'unet.last_activation': 'tanh,none'
 }
 
 SLURM_CONFIG = {
-    'timeout_min': 60*2,
+    'timeout_min': 60*4,
     'cpus_per_task': 4,
     'mem_gb': 25,
     # 'gpus_per_node': 1,
@@ -66,6 +70,7 @@ class Loss:
     noise: float = 0.0
     sigma: float = 1e-1
     log: bool = False
+    trace: str = 'true'
 
 
 @dataclass
@@ -80,7 +85,7 @@ class Sample:
 class Test:
     run: bool = True
     dt: float = 1e-3
-    n_time_pts: int = 32
+    n_time_pts: int = 128
     n_samples: int = 10_000
     n_plot_samples: int = 2000
     plot_particles: bool = False
@@ -88,6 +93,7 @@ class Test:
     plot_func: bool = False
     w_eps: float = 0.01
     noise_type: str = 'sde'
+    electric: bool = False
 
 
 @dataclass
@@ -185,9 +191,9 @@ cs = ConfigStore.instance()
 cs.store(name="default", node=Config)
 
 vlasov_config = Config(problem='vtwo',
-                       data=Data(t_end=45, n_samples=20_000, dt=1e-2),
+                       data=Data(t_end=45, n_samples=10_000, dt=2e-2),
                        unet=Network(width=64, layers=['P', *['C']*7]),
-                       test=Test(n_plot_samples=10_000, plot_hist=True))
+                       test=Test(n_plot_samples=10_000, plot_hist=True, electric=True, n_time_pts=256))
 
 
 osc_config = Config(problem='bi',

@@ -45,6 +45,18 @@ def compute_metrics(test_cfg: Test, true_sol, test_sol, mu_i):
     # log.info(f'mean_mean_err {mu_i}: {mean_t_err_m:.3e}')
     # log.info(f'mean_var_err {mu_i}:  {mean_t_err_v:.3e}')
 
+    if test_cfg.electric:
+        true_electric = compute_electric_energy(true_sol)
+        test_electric = compute_electric_energy(test_sol)
+        R.RESULT[f'true_electric_{mu_i}'] = true_electric
+        R.RESULT[f'test_electric_{mu_i}'] = test_electric
+
+        err_electric = np.abs(
+            true_electric - test_electric) / np.abs(true_electric)
+        err_electric = np.mean(err_electric)
+        R.RESULT[f'err_electric_{mu_i}'] = err_electric
+        log.info(f'err_electric_{mu_i}: {err_electric:.3e}')
+
     log.info(f'computing wasserstein')
     epsilon = test_cfg.w_eps
     w_time = compute_wasserstein_over_D(true_sol, test_sol, epsilon)
@@ -73,3 +85,36 @@ def compute_wasserstein_over_D(A, B, eps):
         wass.append(w)
 
     return np.asarray(wass)
+
+
+def compute_electric_energy(sol):
+    from hflow.data.vlasov import (get_gradient_matrix, get_laplacian_matrix,
+                                   getAcc)
+
+    T, Nn, D = sol.shape
+    N = Nn // 8
+
+    sol = sol[:, :N*8]
+
+    boxsize = 1  # not 50 because everything should be normalized
+    sol = np.mod(sol, boxsize)
+    sol[sol == 0.0] = 1e-5
+    sol[sol == 1.0] = (1-1e-5)
+    print(sol.max(), sol.min())
+
+    Lmtx = get_laplacian_matrix(N, boxsize)
+    Gmtx = get_gradient_matrix(N, boxsize)
+
+    # this will take essentially as long as the full simulation
+    phi = np.zeros((T, Nn))
+
+    for j in range(T):
+        _, phi[j, :] = np.squeeze(
+            getAcc(sol[j, :, 0][:, None], N, boxsize, 1, Gmtx, Lmtx))
+
+    # calculate electric energy at all times
+    E = - 0.5 * np.mean(phi, axis=1)
+
+    true_box = 50
+
+    return E * true_box**2

@@ -5,7 +5,7 @@ import flax.linen as nn
 import jax
 import jax.numpy as jnp
 
-from hflow.net.layers import (CoLoRA, Fourier_Random, Lipswish, Periodic,
+from hflow.net.layers import (CoLoRA, FiLM, Fourier_Random, Lipswish, Periodic,
                               Rational, Siren)
 
 
@@ -15,6 +15,7 @@ class DNN(nn.Module):
     out_dim: int
     activation: str = 'swish'
     period: Optional[jnp.ndarray] = None
+    w0: float = 10.0
     rank: int = 1
     full: bool = False
     squeeze: bool = False
@@ -32,7 +33,7 @@ class DNN(nn.Module):
             if is_last:
                 width = self.out_dim
             L = get_layer(layer=layer, width=width,
-                          period=self.period, rank=self.rank, full=self.full, bias=self.bias)
+                          period=self.period, rank=self.rank, full=self.full, bias=self.bias, w0=self.w0)
             x = L(x)
             if not is_last:
                 x = A(x)
@@ -45,7 +46,7 @@ class DNN(nn.Module):
         return x
 
 
-def get_layer(layer, width, period=None, rank=1, full=False, bias=True):
+def get_layer(layer, width, period=None, rank=1, full=False, bias=True, w0=10.0):
     if layer == 'D':
         L = nn.Dense(width, use_bias=bias)
     elif layer == 'P':
@@ -53,7 +54,9 @@ def get_layer(layer, width, period=None, rank=1, full=False, bias=True):
     elif layer == 'C':
         L = CoLoRA(width, rank, full, use_bias=bias)
     elif layer == 'F':
-        L = Fourier_Random(width, variance=period)
+        L = FiLM(width, full, use_bias=bias)
+    elif layer == 'Fr':
+        L = Fourier_Random(width, variance=w0)
     else:
         raise Exception(f"unknown layer: {layer}")
     return L

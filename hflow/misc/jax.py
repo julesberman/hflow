@@ -33,3 +33,7 @@ def hess_trace_estimator(fn, argnum=0, diff='rev'):
 
 def meanvmap(f, mean_axes=(0,), in_axes=(0,)):
     return lambda *fargs, **fkwargs: jnp.mean(vmap(f, in_axes=in_axes)(*fargs, **fkwargs), axis=mean_axes)
+
+
+def tracewrap(f, axis1=0, axis2=1):
+    return lambda *fargs, **fkwargs: jnp.trace(f(*fargs, **fkwargs), axis1=axis1, axis2=axis2)

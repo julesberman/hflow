@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 from einops import rearrange
 from jax import jit, vmap
 
@@ -27,19 +28,26 @@ def get_data(problem, data_cfg: Data, key):
     sols = []
 
     if problem == 'vbump':
-        mus = np.asarray([0.5, 1.0, 1.5])
+        train_mus = np.asarray([1.0, 1.2, 1.4, 1.6])
+        test_mus = np.asarray([1.1, 1.3, 1.5])
+        mus = np.concatenate([train_mus, test_mus])
         for mu in mus:
             res = run_vlasov(n_samples, t_eval, mu, mode='bump-on-tail')
             sols.append(res)
         sols = np.asarray(sols)
     elif problem == 'vtwo':
-        mus = np.asarray([0.5, 1.0, 1.5])
+        train_mus = np.asarray([1.0, 1.2, 1.4, 1.6, 1.8])
+        test_mus = np.asarray([0.8, 1.1, 1.3, 1.5, 2.0])
+        mus = np.concatenate([train_mus, test_mus])
         for mu in mus:
             res = run_vlasov(n_samples, t_eval, mu, mode='two-stream')
             sols.append(res)
         sols = np.asarray(sols)
     elif problem == 'bi':
-        mus = np.asarray([0.15, 0.1, 0.05])
+
+        train_mus = np.asarray([0.15, 0.1, 0.05])
+        test_mus = np.asarray([0.2, 0.125, 0.075, 0.0])
+        mus = np.concatenate([train_mus, test_mus])
 
         def solve_for_mu(mu):
             drift, diffusion = get_2d_bi(mu)
@@ -77,17 +85,33 @@ def get_data(problem, data_cfg: Data, key):
 
     log.info(f'train data (M x T x N x D) {sols.shape}')
 
+    # split train test
+    test_indices = np.where(np.isin(mus, test_mus))[0]
+    train_indices = np.where(np.isin(mus, train_mus))[0]
+
     R.RESULT['t_eval'] = t_eval
-    R.RESULT['sols'] = sols
 
     if data_cfg.save:
         save_data(problem, sols, mus, t_eval)
 
+    if data_cfg.load:
+        load_data(problem, sols, mus, t_eval)
+
     sols, mus, t_eval = normalize_dataset(
         sols, mus, t_eval, data_cfg.normalize)
-    data = (sols, mus, t_eval)
 
-    return data
+    train_sols, test_sols = sols[train_indices], sols[test_indices]
+    train_mus, test_mus = mus[train_indices], mus[test_indices]
+
+    R.RESULT['train_mus'] = train_mus
+    R.RESULT['test_mus'] = test_mus
+    R.RESULT['train_sols'] = train_sols
+    R.RESULT['test_sols'] = test_sols
+
+    train_data = (train_sols, train_mus, t_eval)
+    test_data = (test_sols, test_mus, t_eval)
+
+    return train_data, test_data
 
 
 def save_data(problem, sols, mu, t):
@@ -100,6 +124,15 @@ def save_data(problem, sols, mu, t):
     output_dir.mkdir(exist_ok=True, parents=True)
     output_dir = (output_dir / problem).with_suffix(".pkl")
     save_pickle(output_dir, data)
+
+
+def load_data(problem):
+    wd = Path(os.getcwd())
+    output_dir = wd / 'ground_truth' / 'sde'
+    output_dir = (output_dir / problem).with_suffix(".pkl")
+    log.info(f"loading data from {output_dir}")
+    data = pd.read_pickle(output_dir)
+    return data
 
 
 def normalize_dataset(sols, mus, t_eval, normalize_data):
@@ -115,6 +148,5 @@ def normalize_dataset(sols, mus, t_eval, normalize_data):
         R.RESULT['data_norm'] = (d_shift, d_scale)
 
     R.RESULT['mu_norm'] = (mu_shift, mu_scale)
-    R.RESULT['mu_train'] = mus_1
 
     return sols, mus_1, t1

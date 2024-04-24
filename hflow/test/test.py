@@ -32,6 +32,7 @@ def test_model(cfg: Config, data, s_fn, opt_params, key):
 
     R.RESULT['t_int'] = t_int
     for mu_i in range(len(mus)):
+        log.info(f'testing mu {mus[mu_i]} {mu_i}')
         true_sol = sol[mu_i]
         if test_cfg.noise_type == 'sde':
             test_sol = solve_test_sde(s_fn, opt_params, ics[mu_i], t_int,

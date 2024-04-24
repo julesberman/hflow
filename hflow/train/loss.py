@@ -6,7 +6,7 @@ from jax import grad, jacfwd, jacrev, jit, jvp, vmap
 from jax.experimental.host_callback import id_print
 
 from hflow.config import Loss
-from hflow.misc.jax import hess_trace_estimator
+from hflow.misc.jax import hess_trace_estimator, tracewrap
 
 
 def get_loss_fn(loss_cfg: Loss, s_fn):
@@ -14,12 +14,13 @@ def get_loss_fn(loss_cfg: Loss, s_fn):
     noise = loss_cfg.noise
     sigma = loss_cfg.sigma
     if loss_cfg.loss_fn == 'am':
-        loss_fn = Action_Match(s_fn, noise=noise, sigma=sigma)
+        loss_fn = Action_Match(
+            s_fn, noise=noise, sigma=sigma, trace=loss_cfg.trace)
 
     return loss_fn
 
 
-def Action_Match(s, noise=0.0, sigma=0.0, return_interior=False):
+def Action_Match(s, noise=0.0, sigma=0.0, return_interior=False, trace='true'):
 
     def s_sep(mu, t, x, params):
         mu_t = jnp.concatenate([mu, t])
@@ -31,8 +32,12 @@ def Action_Match(s, noise=0.0, sigma=0.0, return_interior=False):
     s_dx = jacrev(s, 1)
     s_dx_Vx = vmap(s_dx, in_axes=(None, 0, None))
 
-    trace_dds = hess_trace_estimator(s, argnum=1)
-    trace_dds_Vx = vmap(trace_dds, (None, None, 0, None))
+    if trace == 'hutch':
+        trace_dds = hess_trace_estimator(s, argnum=1)
+        trace_dds_Vx = vmap(trace_dds, (None, None, 0, None))
+    else:
+        trace_dds = tracewrap(jacfwd(s_dx, 1))
+        trace_dds_Vx = vmap(trace_dds, (None, 0, None))
 
     def am_loss(params, x_t_batch, mu, t_batch, quad_weights, key):
         x_t_batch += jax.random.normal(key, x_t_batch.shape)*noise
@@ -60,8 +65,12 @@ def Action_Match(s, noise=0.0, sigma=0.0, return_interior=False):
 
             # entropic
             if sigma > 0.0:
-                gu, trace_ets = trace_dds_Vx(key, mu_t, x_batch, params)
-                ent = trace_ets*sigma**2*0.5
+                if trace == 'hutch':
+                    gu, tra = trace_dds_Vx(key, mu_t, x_batch, params)
+                else:
+                    tra = trace_dds_Vx(mu_t, x_batch, params)
+                    gu = s_dx_Vx(mu_t, x_batch, params)
+                ent = tra*sigma**2*0.5
             else:
                 gu = s_dx_Vx(mu_t, x_batch, params)
                 ent = 0.0

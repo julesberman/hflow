@@ -15,12 +15,12 @@ from hflow.train.train import train_model
 @hydra.main(version_base=None, config_name="default")
 def run(cfg: Config) -> None:
 
-    key, data, loss_fn, arg_fn, s_fn, params_init = build(cfg)
+    key, train_data, test_data, loss_fn, arg_fn, s_fn, params_init = build(cfg)
 
     opt_params = train_model(
         cfg.optimizer, arg_fn, loss_fn, params_init, key)
 
-    test_sol = test_model(cfg, data, s_fn, opt_params, key)
+    test_sol = test_model(cfg, test_data, s_fn, opt_params, key)
 
     save_results(R.RESULT, cfg)
 
@@ -29,14 +29,14 @@ def build(cfg: Config):
 
     key = setup(cfg)
 
-    data = get_data(cfg.problem, cfg.data, key)
+    train_data, test_data = get_data(cfg.problem, cfg.data, key)
 
-    s_fn, params_init = get_network(cfg, data, key)
+    s_fn, params_init = get_network(cfg, train_data, key)
 
-    arg_fn = get_arg_fn(cfg.sample, data)
+    arg_fn = get_arg_fn(cfg.sample, train_data)
     loss_fn = get_loss_fn(cfg.loss, s_fn)
 
-    return key, data, loss_fn, arg_fn, s_fn, params_init
+    return key, train_data, test_data, loss_fn, arg_fn, s_fn, params_init
 
 
 if __name__ == "__main__":

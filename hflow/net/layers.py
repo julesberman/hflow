@@ -82,6 +82,47 @@ class CoLoRA(nn.Module):
         return out
 
 
+class FiLM(nn.Module):
+
+    width: int
+    full: bool
+    w_init: Callable = initializers.lecun_normal()
+    b_init: Callable = initializers.zeros_init()
+    use_bias: bool = True
+    param_dtype = jnp.float32
+
+    @nn.compact
+    def __call__(self, X):
+        D, K = X.shape[-1], self.width
+
+        w_init = self.w_init
+        b_init = self.b_init
+        z_init = initializers.zeros_init()
+
+        W = self.param('W', w_init, (D, K), self.param_dtype)
+
+        if self.full:
+            n_alpha = self.width
+        else:
+            n_alpha = 1
+
+        alpha = self.param('alpha', z_init, (n_alpha*2,), self.param_dtype)
+
+        out = X@W
+
+        if self.use_bias:
+            b = self.param("b", b_init, (K,))
+            b = jnp.broadcast_to(b, out.shape)
+            out += b
+
+        gamma, beta = alpha[:n_alpha], alpha[n_alpha:]
+        gamma += 1
+
+        out = out*gamma + beta
+
+        return out
+
+
 class Rational(nn.Module):
     """
     Rational activation function
