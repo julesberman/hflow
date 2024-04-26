@@ -11,19 +11,27 @@ from hflow.misc.misc import epoch_time, unique_id
 # sweep configurationm, if empty will not sweep
 SWEEP = {}
 SWEEP = {
-    'problem': 'vbump,vtwo',
+    'problem': 'vtwo',
     'optimizer.iters': '25_000',
-    'sample.bs_t': '256',
-    'sample.bs_n': '256',
-    'unet.activation': 'swish,lipswish,sin',
-    'unet.layers': f"{['P', *['C']*7]},{['P', *['F']*7]}",
+    'sample.bs_t': '128',
+    'sample.bs_n': '128',
+    'unet.width': '64',
+    'optimizer.lr': '1e-3,1e-4',
+    'seed': '1,2,3'
+    # 'data.batches': 8
+    # 'sample.scheme_t': 'equi,gauss',
+    # 'loss.sigma': '0.0,1e-3,5e-3,1e-2,5e-2,1e-1,5e-1,1e0'
+    # 'sample.scheme_t': 'rand,gauss,equi',
+    # 'loss.trace': 'hess,true'
+    # 'unet.activation': 'swish,lipswish,sin',
+    # 'unet.layers': f"{['P', *['C']*7]},{['P', *['F']*7]}",
     # 'unet.full': "True,False"
     # 'sample.scheme_t': 'rand,gauss',
     # 'unet.last_activation': 'tanh,none'
 }
 
 SLURM_CONFIG = {
-    'timeout_min': 60*4,
+    'timeout_min': 60*2,
     'cpus_per_task': 4,
     'mem_gb': 25,
     # 'gpus_per_node': 1,
@@ -42,6 +50,8 @@ class Network:
     full: bool = True
     bias: bool = True
     last_activation: Union[str, None] = 'none'
+    w0: float = 8.0
+    w_init: str = 'lecun'
 
 
 @dataclass
@@ -58,10 +68,10 @@ class Data:
     dt: float = 5e-3
     t_end: int = 10
     n_samples: int = 10_000
-    n_dim: int = 128
     normalize: bool = True
     save: bool = False
     load: bool = False
+    batches: int = 1
 
 
 @dataclass
@@ -70,7 +80,7 @@ class Loss:
     noise: float = 0.0
     sigma: float = 1e-1
     log: bool = False
-    trace: str = 'true'
+    trace: str = 'hutch'
 
 
 @dataclass
@@ -78,7 +88,7 @@ class Sample:
     bs_n: int = 128
     bs_t: int = 128
     scheme_t: str = 'gauss'
-    scheme_n: str = 'rand'
+    scheme_n: str = 'traj'
 
 
 @dataclass
@@ -94,6 +104,7 @@ class Test:
     w_eps: float = 0.01
     noise_type: str = 'sde'
     electric: bool = False
+    save_sol: bool = False
 
 
 @dataclass
@@ -191,8 +202,8 @@ cs = ConfigStore.instance()
 cs.store(name="default", node=Config)
 
 vlasov_config = Config(problem='vtwo',
-                       data=Data(t_end=45, n_samples=10_000, dt=2e-2),
-                       unet=Network(width=64, layers=['P', *['C']*7]),
+                       data=Data(t_end=50, n_samples=10_000, dt=2e-2),
+                       unet=Network(width=64, layers=[*['C']*7]),
                        test=Test(n_plot_samples=10_000, plot_hist=True, electric=True, n_time_pts=256))
 
 

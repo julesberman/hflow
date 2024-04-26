@@ -40,9 +40,9 @@ def test_model(cfg: Config, data, s_fn, opt_params, key):
         elif test_cfg.noise_type == 'spde':
             test_sol = solve_test_spde(
                 s_fn, opt_params, ics[mu_i], t_int,  sigma, mus[mu_i], key)
-
-        R.RESULT[f'true_sol_{mu_i}'] = true_sol
-        R.RESULT[f'test_sol_{mu_i}'] = test_sol
+        if test_cfg.save_sol:
+            R.RESULT[f'true_sol_{mu_i}'] = true_sol
+            R.RESULT[f'test_sol_{mu_i}'] = test_sol
 
         compute_metrics(test_cfg, true_sol, test_sol, mu_i)
 

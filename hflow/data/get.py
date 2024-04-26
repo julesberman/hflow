@@ -36,8 +36,8 @@ def get_data(problem, data_cfg: Data, key):
             sols.append(res)
         sols = np.asarray(sols)
     elif problem == 'vtwo':
-        train_mus = np.asarray([1.0, 1.2, 1.4, 1.6, 1.8])
-        test_mus = np.asarray([0.8, 1.1, 1.3, 1.5, 2.0])
+        train_mus = np.asarray([1.2, 1.3, 1.4])
+        test_mus = np.asarray([1.25, 1.31, 1.35])
         mus = np.concatenate([train_mus, test_mus])
         for mu in mus:
             res = run_vlasov(n_samples, t_eval, mu, mode='two-stream')
@@ -85,6 +85,7 @@ def get_data(problem, data_cfg: Data, key):
 
     log.info(f'train data (M x T x N x D) {sols.shape}')
 
+    mus = np.sort(mus)
     # split train test
     test_indices = np.where(np.isin(mus, test_mus))[0]
     train_indices = np.where(np.isin(mus, train_mus))[0]
@@ -105,8 +106,12 @@ def get_data(problem, data_cfg: Data, key):
 
     R.RESULT['train_mus'] = train_mus
     R.RESULT['test_mus'] = test_mus
-    R.RESULT['train_sols'] = train_sols
-    R.RESULT['test_sols'] = test_sols
+
+    print(mus)
+    print(test_mus)
+    print(train_mus)
+    # R.RESULT['train_sols'] = train_sols
+    # R.RESULT['test_sols'] = test_sols
 
     train_data = (train_sols, train_mus, t_eval)
     test_data = (test_sols, test_mus, t_eval)

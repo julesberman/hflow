@@ -30,12 +30,26 @@ def get_colora(unet: Network, hnet: Network, data, key):
     rank = unet.rank
     period = np.asarray([1.0]*x_dim)
 
-    u_config = {'width': unet.width, 'layers': unet.layers}
-    h_config = {'width': hnet.width, 'layers': hnet.layers}
+    u_config = {'width': unet.width,
+                'layers': unet.layers,
+                'activation': unet.activation,
+                'last_activation': unet.activation,
+                'w0': unet.w0,
+                'bias': unet.bias,
+                'period': period,
+                'w_init': unet.w_init,
+                }
+
+    h_config = {'width': hnet.width,
+                'layers': hnet.layers,
+                'activation': hnet.activation,
+                'last_activation': hnet.activation,
+                'w0': hnet.w0,
+                'bias': hnet.bias,
+                'w_init': hnet.w_init, }
 
     u_fn, h_fn, theta_init, psi_init = build_colora(
-        u_config, h_config, x_dim, mu_t_dim, u_dim,
-        period=period, rank=rank, key=key, full=unet.full, bias=unet.bias)
+        u_config, h_config, x_dim, mu_t_dim, u_dim, rank=rank, key=key, full=unet.full)
 
     psi_theta_init = (psi_init, theta_init)
 

@@ -34,7 +34,7 @@ def build(cfg: Config):
     s_fn, params_init = get_network(cfg, train_data, key)
 
     arg_fn = get_arg_fn(cfg.sample, train_data)
-    loss_fn = get_loss_fn(cfg.loss, s_fn)
+    loss_fn = get_loss_fn(cfg.loss, cfg.data, s_fn)
 
     return key, train_data, test_data, loss_fn, arg_fn, s_fn, params_init
 

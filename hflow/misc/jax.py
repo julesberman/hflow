@@ -37,3 +37,21 @@ def meanvmap(f, mean_axes=(0,), in_axes=(0,)):
 
 def tracewrap(f, axis1=0, axis2=1):
     return lambda *fargs, **fkwargs: jnp.trace(f(*fargs, **fkwargs), axis1=axis1, axis2=axis2)
+
+
+def batchmap(f, n_batches, argnum=0):
+
+    def wrap(*fargs, **fkwarg):
+        fargs = list(fargs)
+        X = fargs[argnum]
+        batches = jnp.split(X, n_batches, axis=0)
+
+        result = []
+        for B in batches:
+            fargs[argnum] = B
+            a = f(*fargs, **fkwarg)
+            result.append(a)
+
+        return jnp.concatenate(result)
+
+    return wrap

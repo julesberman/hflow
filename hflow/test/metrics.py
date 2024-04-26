@@ -100,7 +100,6 @@ def compute_electric_energy(sol):
     sol = np.mod(sol, boxsize)
     sol[sol == 0.0] = 1e-5
     sol[sol == 1.0] = (1-1e-5)
-    print(sol.max(), sol.min())
 
     Lmtx = get_laplacian_matrix(N, boxsize)
     Gmtx = get_gradient_matrix(N, boxsize)

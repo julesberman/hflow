@@ -14,10 +14,8 @@ def build_colora(
     mu_t_dim: int,
     u_dim: int,
     lora_filter: List[str] = ['alpha'],
-    period: Optional[jnp.ndarray] = None,
     rank: int = 1,
     full: bool = False,
-    bias: bool = True,
     key: Any = None
 ):
     """Function to set up the full CoLoRA architecture both the hypernetwork given by h and the reduce model given by u_hat
@@ -40,8 +38,7 @@ def build_colora(
         theta_init: parameter initializations for theta
         psi_init: parameter initializations for psi
     """
-    net_u = DNN(**u_hat_config, out_dim=u_dim,
-                period=period, rank=rank, full=full, bias=bias)
+    net_u = DNN(**u_hat_config, out_dim=u_dim, rank=rank, full=full)
     params_init, u_apply = init_net(net_u, x_dim, key=key)
 
     # split up the params of u into the offline params (theta) and the online params (phi)

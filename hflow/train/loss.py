@@ -5,22 +5,22 @@ from einops import rearrange
 from jax import grad, jacfwd, jacrev, jit, jvp, vmap
 from jax.experimental.host_callback import id_print
 
-from hflow.config import Loss
-from hflow.misc.jax import hess_trace_estimator, tracewrap
+from hflow.config import Data, Loss
+from hflow.misc.jax import batchmap, hess_trace_estimator, tracewrap
 
 
-def get_loss_fn(loss_cfg: Loss, s_fn):
+def get_loss_fn(loss_cfg: Loss, data_cfg: Data, s_fn):
 
     noise = loss_cfg.noise
     sigma = loss_cfg.sigma
     if loss_cfg.loss_fn == 'am':
-        loss_fn = Action_Match(
-            s_fn, noise=noise, sigma=sigma, trace=loss_cfg.trace)
+        loss_fn = OV_Loss(
+            s_fn, noise=noise, sigma=sigma, trace=loss_cfg.trace, batches=data_cfg.batches)
 
     return loss_fn
 
 
-def Action_Match(s, noise=0.0, sigma=0.0, return_interior=False, trace='true'):
+def OV_Loss(s, noise=0.0, sigma=0.0, return_interior=False, trace='true', batches=1):
 
     def s_sep(mu, t, x, params):
         mu_t = jnp.concatenate([mu, t])
@@ -59,7 +59,7 @@ def Action_Match(s, noise=0.0, sigma=0.0, return_interior=False, trace='true'):
             x_batch, mu_t = xt_tensor[:-MT], xt_tensor[-MT:]
             x_batch = rearrange(x_batch, '(N D) -> N D', D=D)
 
-            mu, t = mu_t[:1], mu_t[1:]
+            mu, t = mu_t[:-1], mu_t[-1:]
             ut = s_dt_Vx(mu, t, x_batch, params)
             ut = jnp.squeeze(ut)
 
@@ -79,12 +79,17 @@ def Action_Match(s, noise=0.0, sigma=0.0, return_interior=False, trace='true'):
 
             return (ut+gu+ent).mean()
 
-        interior = vmap(interior_loss)(xt_tensor)
+        interior_loss = vmap(interior_loss)
+        if batches > 1:
+            interior_loss = batchmap(interior_loss, batches)
+        interior = interior_loss(xt_tensor)
 
         if quad_weights is not None:
-            interior_w = interior * quad_weights
+            loss_interior = (interior * quad_weights).sum()
+        else:
+            loss_interior = interior.mean()
 
-        loss = (bound.mean() + interior_w.sum())
+        loss = (bound.mean() + loss_interior)
 
         if return_interior:
             return loss, interior

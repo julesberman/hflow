@@ -4,6 +4,7 @@ from typing import Callable, List, Optional
 import flax.linen as nn
 import jax
 import jax.numpy as jnp
+from flax.linen import initializers
 
 from hflow.net.layers import (CoLoRA, FiLM, Fourier_Random, Lipswish, Periodic,
                               Rational, Siren)
@@ -21,18 +22,20 @@ class DNN(nn.Module):
     squeeze: bool = False
     bias: bool = True
     last_activation: Optional[str] = None
+    w_init: str = 'lecun'
 
     @nn.compact
     def __call__(self, x):
         depth = len(self.layers)
         width = self.width
+        w_init = get_init(self.w_init, self.w0)
 
         A = get_activation(self.activation)
         for i, layer in enumerate(self.layers):
             is_last = i == depth - 1
             if is_last:
                 width = self.out_dim
-            L = get_layer(layer=layer, width=width,
+            L = get_layer(layer=layer, width=width, w_init=w_init,
                           period=self.period, rank=self.rank, full=self.full, bias=self.bias, w0=self.w0)
             x = L(x)
             if not is_last:
@@ -46,15 +49,28 @@ class DNN(nn.Module):
         return x
 
 
-def get_layer(layer, width, period=None, rank=1, full=False, bias=True, w0=10.0):
+def get_init(init, w0):
+
+    if init is None or init == 'lecun':
+        w = initializers.lecun_normal()
+    elif init == 'ortho':
+        w = initializers.orthogonal()
+    elif init == 'normal':
+        w = initializers.truncated_normal(w0)
+    elif init == 'he':
+        w = initializers.he_normal()
+    return w
+
+
+def get_layer(layer, width, w_init, period=None, rank=1, full=False, bias=True, w0=10.0):
     if layer == 'D':
-        L = nn.Dense(width, use_bias=bias)
+        L = nn.Dense(width, use_bias=bias,  kernel_init=w_init)
     elif layer == 'P':
-        L = Periodic(width, period=period, use_bias=bias)
+        L = Periodic(width, period=period, use_bias=bias, w_init=w_init)
     elif layer == 'C':
-        L = CoLoRA(width, rank, full, use_bias=bias)
+        L = CoLoRA(width, rank, full, use_bias=bias, w_init=w_init)
     elif layer == 'F':
-        L = FiLM(width, full, use_bias=bias)
+        L = FiLM(width, full, use_bias=bias, w_init=w_init)
     elif layer == 'Fr':
         L = Fourier_Random(width, variance=w0)
     else:
