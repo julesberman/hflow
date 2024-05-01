@@ -42,14 +42,7 @@ def load_multi(problem, name, out_dir='./results'):
         if os.path.isdir(item_path) and item.isdigit():
             try:
                 row = pd.read_pickle(item_path / 'result.pkl')
-                # del row['test_sol_0']
-                del row['test_sol_1']
-                del row['test_sol_2']
-                del row['test_sol_3']
-                del row['true_sol_0']
-                del row['true_sol_1']
-                del row['true_sol_2']
-                del row['true_sol_3']
+
                 rows.append(row)
                 cfg = OmegaConf.load(item_path / ".hydra/config.yaml")
                 cfgs.append(cfg)

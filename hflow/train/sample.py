@@ -10,13 +10,14 @@ from scipy.interpolate import RegularGridInterpolator
 
 import hflow.io.result as R
 from hflow.config import Sample
+from hflow.io.utils import log
 from hflow.misc.jax import get_rand_idx
 from hflow.misc.misc import (gauss_quadrature_weights_points,
                              pts_array_from_space)
 
 
 def get_arg_fn(sample_cfg: Sample, data):
-
+    log.info("gettings samples...")
     sols, mu_data, t_data = data
     bs_t = sample_cfg.bs_t
     quad_weights = None
@@ -59,13 +60,13 @@ def get_arg_fn(sample_cfg: Sample, data):
         sols = interplate_in_t(sols, t_data, g_pts_01)
         t_data = g_pts_01
 
-    elif sample_cfg.scheme_t == 'equi' or sample_cfg.scheme_t == 'seq':
+    elif sample_cfg.scheme_t == 'equi':
         g_pts_01 = jnp.linspace(0.0, 1.0, bs_t+2)
         sols = interplate_in_t(sols, t_data, g_pts_01)
         t_data = g_pts_01
 
     sols = rearrange(sols, 'T M N D -> M T N D')
-
+    log.info(f'sample shape {sols.shape}')
     args_fn = get_data_fn(sols, mu_data, t_data, quad_weights,
                           bs_n, bs_t, sample_cfg.scheme_t, sample_cfg.scheme_n)
 
@@ -100,15 +101,24 @@ def get_data_fn(sols, mu_data, t_data, quad_weights, bs_n, bs_t, scheme_t, schem
         elif scheme_t == 'seq':
             end = T-1
 
-            if percent < 0.1:
-                t_sample = t_data
+            # if percent < 0.25:
+            #     t_sample = t_data
 
-            else:
-                groups = jnp.linspace(0.2, 1, 10)
-                closest = groups[jnp.argmin(jnp.abs(groups-percent))]
-                end = int(min(end*closest, end))
-                t_sample = t_data[:end]
-                sols_sample = sols_sample[:end]
+            # else:
+            # print(percent)
+            groups = jnp.linspace(0.2, 1, 10)
+            closest = groups[jnp.argmin(jnp.abs(groups-percent))]
+            end = int(min(end*closest, end))
+            # t_sample = t_data[:end]
+            # sols_sample = sols_sample[:end]
+
+            t_idx = jax.random.choice(keyt, end, shape=(bs_t,), replace=False)
+            start, end = jnp.asarray([0]), jnp.asarray([end])
+            t_idx = jnp.concatenate([start, t_idx, end])
+            t_sample = t_data[t_idx]
+
+            # t_sample = jnp.linspace(0, 1, len(t_sample)).reshape(-1, 1)
+            sols_sample = sols_sample[t_idx]
 
         else:
             t_sample = t_data

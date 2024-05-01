@@ -38,6 +38,8 @@ class Periodic(nn.Module):
 
         return o
 
+        return out
+
 
 class CoLoRA(nn.Module):
 
@@ -59,7 +61,7 @@ class CoLoRA(nn.Module):
 
         W = self.param('W', w_init, (D, K), self.param_dtype)
         A = self.param('A', w_init, (D, r), self.param_dtype)
-        B = self.param('B', z_init, (r, K), self.param_dtype)
+        B = self.param('B', w_init, (r, K), self.param_dtype)
 
         if self.full:
             n_alpha = self.rank

@@ -11,27 +11,15 @@ from hflow.misc.misc import epoch_time, unique_id
 # sweep configurationm, if empty will not sweep
 SWEEP = {}
 SWEEP = {
-    'problem': 'vtwo',
-    'optimizer.iters': '25_000',
-    'sample.bs_t': '128',
-    'sample.bs_n': '128',
-    'unet.width': '64',
-    'optimizer.lr': '1e-3,1e-4',
-    'seed': '1,2,3'
-    # 'data.batches': 8
-    # 'sample.scheme_t': 'equi,gauss',
-    # 'loss.sigma': '0.0,1e-3,5e-3,1e-2,5e-2,1e-1,5e-1,1e0'
-    # 'sample.scheme_t': 'rand,gauss,equi',
-    # 'loss.trace': 'hess,true'
-    # 'unet.activation': 'swish,lipswish,sin',
-    # 'unet.layers': f"{['P', *['C']*7]},{['P', *['F']*7]}",
-    # 'unet.full': "True,False"
-    # 'sample.scheme_t': 'rand,gauss',
-    # 'unet.last_activation': 'tanh,none'
+    'problem': 'vsingle',
+    'optimizer.iters': '5_000,10_000,25_000,100_000',
+    'seed': '2,3,4',
+    'unet.width': "35",
+
 }
 
 SLURM_CONFIG = {
-    'timeout_min': 60*2,
+    'timeout_min': 60*6,
     'cpus_per_task': 4,
     'mem_gb': 25,
     # 'gpus_per_node': 1,
@@ -42,7 +30,7 @@ SLURM_CONFIG = {
 @dataclass
 class Network:
     model: str = 'dnn'
-    width: int = 32
+    width: int = 64
     layers: List[str] = field(default_factory=lambda: [
                               'C']*7)  # ['P',*['C']*7])
     activation: str = 'swish'
@@ -56,10 +44,10 @@ class Network:
 
 @dataclass
 class Optimizer:
-    lr: float = 5e-3
+    lr: float = 2e-3
     iters: int = 25_000
     scheduler: bool = True
-    optimizer: str = 'adamw'
+    optimizer: str = 'adam'
 
 
 @dataclass
@@ -72,6 +60,7 @@ class Data:
     save: bool = False
     load: bool = False
     batches: int = 1
+    dim: Union[int, None] = None
 
 
 @dataclass
@@ -85,8 +74,8 @@ class Loss:
 
 @dataclass
 class Sample:
-    bs_n: int = 128
-    bs_t: int = 128
+    bs_n: int = 256
+    bs_t: int = 256
     scheme_t: str = 'gauss'
     scheme_n: str = 'traj'
 
@@ -96,7 +85,7 @@ class Test:
     run: bool = True
     dt: float = 1e-3
     n_time_pts: int = 128
-    n_samples: int = 10_000
+    n_samples: int = 20_000
     n_plot_samples: int = 2000
     plot_particles: bool = False
     plot_hist: bool = False
@@ -105,6 +94,8 @@ class Test:
     noise_type: str = 'sde'
     electric: bool = False
     save_sol: bool = False
+    mean: bool = False
+    wass: bool = False
 
 
 @dataclass
@@ -202,18 +193,21 @@ cs = ConfigStore.instance()
 cs.store(name="default", node=Config)
 
 vlasov_config = Config(problem='vtwo',
-                       data=Data(t_end=50, n_samples=10_000, dt=2e-2),
-                       unet=Network(width=64, layers=[*['C']*7]),
-                       test=Test(n_plot_samples=10_000, plot_hist=True, electric=True, n_time_pts=256))
+                       data=Data(t_end=40, n_samples=10_000, dt=1e-2),
+                       unet=Network(width=64, layers=[*['C']*6]),
+                       test=Test(plot_hist=True, electric=True))
 
 
 osc_config = Config(problem='bi',
                     data=Data(t_end=20),
-                    unet=Network(width=64, layers=[
-                                 'C']*7, last_activation='tanh'),
-                    hnet=Network(width=15, layers=[
-                                 'P', *['C']*3], last_activation='tanh'),
+                    unet=Network(width=64, layers=[*['C']*7]),
                     test=Test(plot_particles=True))
+
+
+trap_config = Config(problem='trap',
+                     data=Data(t_end=4, dim=8, n_samples=10_000, dt=5e-2),
+                     unet=Network(width=64, layers=[*['C']*7]),
+                     test=Test(plot_particles=True, mean=True))
 
 
 sburgers_config = Config(problem='sburgers',
@@ -223,7 +217,7 @@ sburgers_config = Config(problem='sburgers',
                                    plot_func=True, w_eps=0.005, noise_type='spde'),
                          unet=Network(width=64))
 
-
+cs.store(name="trap", node=trap_config)
 cs.store(name="osc", node=osc_config)
 cs.store(name="vlasov", node=vlasov_config)
 cs.store(name="sburgers", node=sburgers_config)

@@ -20,30 +20,26 @@ def compute_metrics(test_cfg: Test, true_sol, test_sol, mu_i):
     true_sol = true_sol[idx]
     test_sol = test_sol[idx]
 
-    # def get_metric(sol):
-    #     mm = np.mean(sol, axis=1)
-    #     var = np.var(sol, axis=1)
-    #     return mm, var
+    if test_cfg.mean:
+        def get_metric(sol):
+            mm = np.mean(sol, axis=1)
+            var = np.var(sol, axis=1)
+            return mm, var
 
-    # true_m, true_v = get_metric(true_sol)
-    # test_m, test_v = get_metric(test_sol)
+        true_m, true_v = get_metric(true_sol)
+        test_m, test_v = get_metric(test_sol)
 
-    # t_err_m = np.linalg.norm(true_m - test_m, axis=1) / \
-    #     np.linalg.norm(true_m, axis=1)
-    # t_err_v = np.linalg.norm(true_v - test_v, axis=1) / \
-    #     np.linalg.norm(true_v, axis=1)
+        t_err_m = np.linalg.norm(true_m - test_m, axis=1) / \
+            np.linalg.norm(true_m, axis=1)
 
-    # mean_t_err_m = np.mean(t_err_m)
-    # mean_t_err_v = np.mean(t_err_v)
+        R.RESULT[f'time_mean_true_{mu_i}'] = true_m
+        R.RESULT[f'time_mean_test_{mu_i}'] = test_m
+        R.RESULT[f'time_mean_err_{mu_i}'] = t_err_m
 
-    # R.RESULT[f'time_mean_err_{mu_i}'] = t_err_m
-    # R.RESULT[f'time_var_err_{mu_i}'] = t_err_v
+        mean_t_err_m = np.mean(t_err_m)
+        R.RESULT[f'mean_mean_err_{mu_i}'] = mean_t_err_m
 
-    # R.RESULT[f'mean_mean_err_{mu_i}'] = mean_t_err_m
-    # R.RESULT[f'mean_var_err_{mu_i}'] = mean_t_err_v
-
-    # log.info(f'mean_mean_err {mu_i}: {mean_t_err_m:.3e}')
-    # log.info(f'mean_var_err {mu_i}:  {mean_t_err_v:.3e}')
+        log.info(f'mean_mean_err {mu_i}: {mean_t_err_m:.3e}')
 
     if test_cfg.electric:
         true_electric = compute_electric_energy(true_sol)
@@ -57,15 +53,16 @@ def compute_metrics(test_cfg: Test, true_sol, test_sol, mu_i):
         R.RESULT[f'err_electric_{mu_i}'] = err_electric
         log.info(f'err_electric_{mu_i}: {err_electric:.3e}')
 
-    log.info(f'computing wasserstein')
-    epsilon = test_cfg.w_eps
-    w_time = compute_wasserstein_over_D(true_sol, test_sol, epsilon)
+    if test_cfg.wass:
+        log.info(f'computing wasserstein')
+        epsilon = test_cfg.w_eps
+        w_time = compute_wasserstein_over_D(true_sol, test_sol, epsilon)
 
-    R.RESULT[f'time_wass_dist_{mu_i}'] = w_time
+        R.RESULT[f'time_wass_dist_{mu_i}'] = w_time
 
-    mean_wass_dist = np.mean(w_time)
-    R.RESULT[f'mean_wass_dist_{mu_i}'] = mean_wass_dist
-    log.info(f'mean_wass_dist_{mu_i}: {mean_wass_dist:.3e}')
+        mean_wass_dist = np.mean(w_time)
+        R.RESULT[f'mean_wass_dist_{mu_i}'] = mean_wass_dist
+        log.info(f'mean_wass_dist_{mu_i}: {mean_wass_dist:.3e}')
 
 
 def compute_wasserstein(A, B, eps):
