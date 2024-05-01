@@ -46,8 +46,8 @@ def get_data(problem, data_cfg: Data, key):
             sols.append(res)
         sols = np.asarray(sols)
     elif problem == 'vtwo':
-        train_mus = np.asarray([0.5, 1.0, 1.5])
-        test_mus = np.asarray([1.75, 1.01, 1.25])
+        train_mus = np.asarray([1.6, 1.65, 1.7, 1.75, 1.8])
+        test_mus = np.asarray([1.675, 1.70001, 1.725])
         mus = np.concatenate([train_mus, test_mus])
         for mu in mus:
             res = run_vlasov(n_samples, t_eval, mu, mode='two-stream')
@@ -55,8 +55,8 @@ def get_data(problem, data_cfg: Data, key):
         sols = np.asarray(sols)
     elif problem == 'bi':
 
-        train_mus = np.asarray([0.15, 0.1, 0.05])
-        test_mus = np.asarray([0.2, 0.125, 0.075, 0.0])
+        train_mus = np.asarray([0.10, 0.20, 0.3])
+        test_mus = np.asarray([0.15, 0.25])
         mus = np.concatenate([train_mus, test_mus])
 
         def solve_for_mu(mu):
@@ -82,8 +82,8 @@ def get_data(problem, data_cfg: Data, key):
         sols = vmap(jit(solve_for_mu))(mus)
         sols = rearrange(sols, 'M N T D -> M T N D')
     elif problem == 'trap':
-        train_mus = np.asarray([0.0, 0.3, 0.6, 0.9, 1.2])
-        test_mus = np.asarray([0.45, 0.6, 0.75])
+        train_mus = np.asarray([0.3, 0.4, 0.5, 0.6, 0.7])
+        test_mus = np.asarray([0.45, 0.55, 0.65])
         mus = np.concatenate([train_mus, test_mus])
         system_dim = data_cfg.dim
 
@@ -98,10 +98,15 @@ def get_data(problem, data_cfg: Data, key):
         sols = rearrange(sols, 'M N T D -> M T N D')
     log.info(f'train data (M x T x N x D) {sols.shape}')
 
-    mus = np.sort(mus)
+    idx = np.argsort(mus)
+    mus = mus[idx]
+    sols = sols[idx]
+
     # split train test
     test_indices = np.where(np.isin(mus, test_mus))[0]
     train_indices = np.where(np.isin(mus, train_mus))[0]
+
+    log.info(f'mus: {np.squeeze(mus)}')
 
     R.RESULT['t_eval'] = t_eval
 
@@ -120,7 +125,7 @@ def get_data(problem, data_cfg: Data, key):
     R.RESULT['train_mus'] = train_mus
     R.RESULT['test_mus'] = test_mus
 
-    print(mus)
+    log.info(f'mus norm: {np.squeeze(mus)}')
 
     # R.RESULT['train_sols'] = train_sols
     # R.RESULT['test_sols'] = test_sols

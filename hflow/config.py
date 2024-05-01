@@ -11,11 +11,12 @@ from hflow.misc.misc import epoch_time, unique_id
 # sweep configurationm, if empty will not sweep
 SWEEP = {}
 SWEEP = {
-    'problem': 'vsingle',
-    'optimizer.iters': '5_000,10_000,25_000,100_000',
-    'seed': '2,3,4',
-    'unet.width': "35",
+    'problem': 'vtwo',
+    'optimizer.iters': '25_000',
 
+    'hnet.width': "15,35,65",
+    'unet.rank': "3,8,12",
+    'hnet.layers': f"{['D']*3},{['D']*5},{['D']*7}",
 }
 
 SLURM_CONFIG = {
@@ -195,7 +196,7 @@ cs.store(name="default", node=Config)
 vlasov_config = Config(problem='vtwo',
                        data=Data(t_end=40, n_samples=10_000, dt=1e-2),
                        unet=Network(width=64, layers=[*['C']*6]),
-                       test=Test(plot_hist=True, electric=True))
+                       test=Test(plot_hist=True, electric=True, wass=True))
 
 
 osc_config = Config(problem='bi',
