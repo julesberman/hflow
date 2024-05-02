@@ -30,6 +30,7 @@ jaxlib==0.4.23
 
 Run a problem with problem specific default settings (recommended)
 ```
+python hflow/run.py -cn=mdyn
 python hflow/run.py -cn=osc problem=bi
 python hflow/run.py -cn=vlasov problem=vtwo
 python hflow/run.py -cn=vlasov problem=vbump

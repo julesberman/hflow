@@ -11,16 +11,14 @@ from hflow.misc.misc import epoch_time, unique_id
 # sweep configurationm, if empty will not sweep
 SWEEP = {}
 SWEEP = {
-    'problem': 'vtwo',
-    'optimizer.iters': '25_000',
+    'problem': 'trap',
+    'optimizer.iters': '25_000,100_000',
+    'data.dim': '2,4',
 
-    'hnet.width': "15,35,65",
-    'unet.rank': "3,8,12",
-    'hnet.layers': f"{['D']*3},{['D']*5},{['D']*7}",
 }
 
 SLURM_CONFIG = {
-    'timeout_min': 60*6,
+    'timeout_min': 60*5,
     'cpus_per_task': 4,
     'mem_gb': 25,
     # 'gpus_per_node': 1,
@@ -33,7 +31,7 @@ class Network:
     model: str = 'dnn'
     width: int = 64
     layers: List[str] = field(default_factory=lambda: [
-                              'C']*7)  # ['P',*['C']*7])
+                              'C']*6)  # ['P',*['C']*7])
     activation: str = 'swish'
     rank: int = 3
     full: bool = True
@@ -106,7 +104,7 @@ class Config:
 
     unet: Network = field(default_factory=Network)
     hnet: Network = field(
-        default_factory=lambda: Network(width=15, layers=['D']*3))
+        default_factory=lambda: Network(width=64, layers=['D']*3))
     optimizer: Optimizer = field(default_factory=Optimizer)
     data: Data = field(default_factory=Data)
 
@@ -201,24 +199,20 @@ vlasov_config = Config(problem='vtwo',
 
 osc_config = Config(problem='bi',
                     data=Data(t_end=20),
-                    unet=Network(width=64, layers=[*['C']*7]),
                     test=Test(plot_particles=True))
 
 
 trap_config = Config(problem='trap',
-                     data=Data(t_end=4, dim=8, n_samples=10_000, dt=5e-2),
-                     unet=Network(width=64, layers=[*['C']*7]),
+                     data=Data(t_end=3, dim=8, n_samples=10_000, dt=1e-2),
                      test=Test(plot_particles=True, mean=True))
 
 
-sburgers_config = Config(problem='sburgers',
-                         data=Data(t_end=3, n_samples=256,
-                                   dt=5e-4, normalize=False),
-                         test=Test(n_samples=8, n_plot_samples=8,
-                                   plot_func=True, w_eps=0.005, noise_type='spde'),
-                         unet=Network(width=64))
+mdyn_config = Config(problem='mdyn',
+                     data=Data(t_end=1, dim=2, n_samples=10_000, dt=2e-3),
+                     test=Test(plot_particles=True, wass=True))
 
+
+cs.store(name="mdyn", node=mdyn_config)
 cs.store(name="trap", node=trap_config)
 cs.store(name="osc", node=osc_config)
 cs.store(name="vlasov", node=vlasov_config)
-cs.store(name="sburgers", node=sburgers_config)

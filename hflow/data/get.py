@@ -9,6 +9,7 @@ from jax import jit, vmap
 
 import hflow.io.result as R
 from hflow.config import Data
+from hflow.data.mdyn import get_mdyn_sol
 from hflow.data.particles import (get_2d_bi, get_2d_lin, get_2d_van, get_ic_bi,
                                   get_ic_lin, get_ic_van)
 from hflow.data.sde import solve_sde
@@ -46,8 +47,11 @@ def get_data(problem, data_cfg: Data, key):
             sols.append(res)
         sols = np.asarray(sols)
     elif problem == 'vtwo':
-        train_mus = np.asarray([1.6, 1.65, 1.7, 1.75, 1.8])
-        test_mus = np.asarray([1.675, 1.70001, 1.725])
+        # train_mus = np.asarray([1.6, 1.65, 1.7, 1.75, 1.8])
+        # test_mus = np.asarray([1.675, 1.70001, 1.725])
+
+        train_mus = np.asarray([1.3, 1.4, 1.5, 1.6, 1.7, 1.8])
+        test_mus = np.asarray([1.35, 1.55, 1.75])
         mus = np.concatenate([train_mus, test_mus])
         for mu in mus:
             res = run_vlasov(n_samples, t_eval, mu, mode='two-stream')
@@ -82,8 +86,9 @@ def get_data(problem, data_cfg: Data, key):
         sols = vmap(jit(solve_for_mu))(mus)
         sols = rearrange(sols, 'M N T D -> M T N D')
     elif problem == 'trap':
-        train_mus = np.asarray([0.3, 0.4, 0.5, 0.6, 0.7])
-        test_mus = np.asarray([0.45, 0.55, 0.65])
+        train_mus = np.asarray([0.3, 0.35, 0.40, 0.45, 0.5])
+        test_mus = np.asarray([0.375, 0.4001, 0.425])
+
         mus = np.concatenate([train_mus, test_mus])
         system_dim = data_cfg.dim
 
@@ -96,6 +101,23 @@ def get_data(problem, data_cfg: Data, key):
 
         sols = vmap(jit(solve_for_mu))(mus)
         sols = rearrange(sols, 'M N T D -> M T N D')
+
+    elif problem == 'mdyn':
+        train_mus = np.asarray([0.0, 1, 1e1, 1e2, 1e3, 1e4])
+        test_mus = np.asarray([0.01, 5e1, 5e3])
+        mus = np.concatenate([train_mus, test_mus])
+        system_dim = data_cfg.dim
+
+        mus = np.concatenate([train_mus, test_mus])
+        for mu in mus:
+            res = get_mdyn_sol(key, system_dim, n_samples,
+                               gamma=0.1, alpha=mu, sigma=0, dt=data_cfg.dt)
+            sols.append(res)
+        sols = np.asarray(sols)
+
+    R.RESULT['train_mus_raw'] = train_mus
+    R.RESULT['test_mus_raw'] = test_mus
+
     log.info(f'train data (M x T x N x D) {sols.shape}')
 
     idx = np.argsort(mus)
