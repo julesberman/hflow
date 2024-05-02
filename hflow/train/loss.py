@@ -13,9 +13,12 @@ def get_loss_fn(loss_cfg: Loss, data_cfg: Data, s_fn):
 
     noise = loss_cfg.noise
     sigma = loss_cfg.sigma
-    if loss_cfg.loss_fn == 'am':
+    if loss_cfg.loss_fn == 'ov':
         loss_fn = OV_Loss(
             s_fn, noise=noise, sigma=sigma, trace=loss_cfg.trace, batches=data_cfg.batches)
+    elif loss_cfg.loss_fn == 'ncsm':
+        sigmas = generate_sigmas(loss_cfg)
+        loss_fn = NCSM_Loss(s_fn, sigmas)
 
     return loss_fn
 
@@ -39,7 +42,7 @@ def OV_Loss(s, noise=0.0, sigma=0.0, return_interior=False, trace='true', batche
         trace_dds = tracewrap(jacfwd(s_dx, 1))
         trace_dds_Vx = vmap(trace_dds, (None, 0, None))
 
-    def am_loss(params, x_t_batch, mu, t_batch, quad_weights, key):
+    def loss_fn(params, x_t_batch, mu, t_batch, quad_weights, key):
         x_t_batch += jax.random.normal(key, x_t_batch.shape)*noise
 
         t_batch = jnp.hstack([jnp.ones((len(t_batch), len(mu))) * mu, t_batch])
@@ -96,4 +99,47 @@ def OV_Loss(s, noise=0.0, sigma=0.0, return_interior=False, trace='true', batche
 
         return loss
 
-    return am_loss
+    return loss_fn
+
+
+def NCSM_Loss(s, sigmas):
+
+    def score_match(x, t, sigma, mu, key, params):
+        seed = jax.random.randint(key, shape=(), minval=-1e8, maxval=1e8)
+        seed += jnp.linalg.norm(x)+jnp.linalg.norm(t)+jnp.linalg.norm(sigma)
+        key = jax.random.PRNGKey(seed.astype(int))
+        noise = jax.random.normal(key, shape=x.shape)
+        x_tilde = x + sigma * noise
+
+        mu_t_sigma = jnp.concatenate([mu, t, sigma])
+
+        l = sigma**2 * 0.5 * \
+            jnp.sum((s(mu_t_sigma, x_tilde, params) + (x_tilde - x)/sigma**2)**2)
+        return l
+
+    score_match = vmap(score_match, (0, None, None, None, None, None))
+    score_match = vmap(score_match, (None, None, 0, None, None, None))
+
+    def loss_fn(params, x_t_batch, mu, t_batch, quad_weights, key):
+        T, N, D = x_t_batch.shape
+        xt_tensor = rearrange(x_t_batch, 'T N D -> T (N D)')
+        xt_tensor = jnp.hstack([xt_tensor, t_batch])  # T (2ND + 1)
+
+        @vmap
+        def score_match_time(x_t):
+            x, t = x_t[:-1], x_t[-1:]
+            x = rearrange(x, '(N D) -> N D', D=D)
+            return score_match(x, t, sigmas, mu, key, params).mean()
+
+        return score_match_time(xt_tensor).mean()
+
+    return loss_fn
+
+
+def generate_sigmas(cfg_loss: Loss):
+    start = 1
+    end = 1e-2
+    L = cfg_loss.L
+    sigmas = jnp.asarray([start * (end / start) ** (i / (L - 1))
+                          for i in range(L)]).reshape(-1, 1)
+    return sigmas

@@ -28,7 +28,7 @@ SLURM_CONFIG = {
 
 @dataclass
 class Network:
-    model: str = 'dnn'
+    model: str = 'colora'
     width: int = 64
     layers: List[str] = field(default_factory=lambda: [
                               'C']*6)  # ['P',*['C']*7])
@@ -53,7 +53,7 @@ class Optimizer:
 class Data:
     ode: str = 'euler'
     dt: float = 5e-3
-    t_end: int = 10
+    t_end: float = 10
     n_samples: int = 10_000
     normalize: bool = True
     save: bool = False
@@ -64,11 +64,12 @@ class Data:
 
 @dataclass
 class Loss:
-    loss_fn: str = 'am'
+    loss_fn: str = 'ov'
     noise: float = 0.0
     sigma: float = 1e-1
     log: bool = False
     trace: str = 'hutch'
+    L: int = 10
 
 
 @dataclass
