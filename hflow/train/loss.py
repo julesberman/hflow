@@ -106,7 +106,8 @@ def NCSM_Loss(s, sigmas):
 
     def score_match(x, t, sigma, mu, key, params):
         seed = jax.random.randint(key, shape=(), minval=-1e8, maxval=1e8)
-        seed += jnp.linalg.norm(x)+jnp.linalg.norm(t)+jnp.linalg.norm(sigma)
+        seed += (jnp.linalg.norm(x)+jnp.linalg.norm(t) +
+                 jnp.linalg.norm(sigma))*1e8
         key = jax.random.PRNGKey(seed.astype(int))
         noise = jax.random.normal(key, shape=x.shape)
         x_tilde = x + sigma * noise
