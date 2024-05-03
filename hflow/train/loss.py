@@ -105,34 +105,41 @@ def OV_Loss(s, noise=0.0, sigma=0.0, return_interior=False, trace='true', batche
 def NCSM_Loss(s, sigmas):
 
     def score_match(x, t, sigma, mu, key, params):
-        seed = jax.random.randint(key, shape=(), minval=-1e8, maxval=1e8)
-        seed += (jnp.linalg.norm(x)+jnp.linalg.norm(t) +
-                 jnp.linalg.norm(sigma))*1e8
-        key = jax.random.PRNGKey(seed.astype(int))
-        noise = jax.random.normal(key, shape=x.shape)
-        x_tilde = x + sigma * noise
-
         mu_t_sigma = jnp.concatenate([mu, t, sigma])
+        seed = jax.random.uniform(key, shape=()) + mu + t + sigma
+        seed = jnp.linalg.norm(seed)
+        key = jax.random.PRNGKey((seed*1e8).astype(int))
+        y = jax.random.normal(key, shape=x.shape)
+
+        x_tilde = x + sigma * y
 
         l = sigma**2 * 0.5 * \
             jnp.sum((s(mu_t_sigma, x_tilde, params) + (x_tilde - x)/sigma**2)**2)
+
         return l
 
-    score_match = vmap(score_match, (0, None, None, None, None, None))
-    score_match = vmap(score_match, (None, None, 0, None, None, None))
-
     def loss_fn(params, x_t_batch, mu, t_batch, quad_weights, key):
+
+        # remove endpoints from OV loss
+        x_t_batch = x_t_batch[1:-1]
+        t_batch = t_batch[1:-1]
+
         T, N, D = x_t_batch.shape
+        T, MT = t_batch.shape
         xt_tensor = rearrange(x_t_batch, 'T N D -> T (N D)')
         xt_tensor = jnp.hstack([xt_tensor, t_batch])  # T (2ND + 1)
 
-        @vmap
-        def score_match_time(x_t):
-            x, t = x_t[:-1], x_t[-1:]
+        def score_match_time_sigma(x_t, sigma):
+            x, t = x_t[:-MT], x_t[-MT:]
             x = rearrange(x, '(N D) -> N D', D=D)
-            return score_match(x, t, sigmas, mu, key, params).mean()
+            loss = vmap(score_match, (0, None, None, None, None, None))(
+                x, t, sigma, mu, key, params)
+            return loss.mean()
 
-        return score_match_time(xt_tensor).mean()
+        score_match_time_sigma = vmap(score_match_time_sigma, (0, None))
+        score_match_time_sigma = vmap(score_match_time_sigma, (None, 0))
+
+        return score_match_time_sigma(xt_tensor, sigmas).mean()
 
     return loss_fn
 

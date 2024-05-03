@@ -25,6 +25,12 @@ def test_model(cfg: Config, data, s_fn, opt_params, key):
     sol, mus, t = data
     t_int = np.linspace(0.0, 1.0, len(t))
     M, T, N, D = sol.shape
+    if test_cfg.t_samples is not None:
+        t_idx = np.linspace(0, T-1, test_cfg.t_samples,
+                            endpoint=True, dtype=np.int32)
+        sol = sol[:, t_idx]
+        t_int = t_int[t_idx]
+
     samples_idx = get_rand_idx(key, sol.shape[2], test_cfg.n_samples)
     ics = sol[:, 0, samples_idx, :]
 
@@ -80,8 +86,7 @@ def solve_test_ald(s_fn, params, ics, t_int, sigmas, mu, key):
     n_samples = ics.shape[0]
 
     def ald(key, mu, t_infer, sigmas, params, eps=2e-5, T=10):
-        x = jax.random.normal(key, (1, D))
-
+        x = jax.random.normal(key, (D,))
         for sigma in sigmas:
             alpha = eps * sigma**2/sigmas[-1]**2
             for _ in range(T):
@@ -100,7 +105,7 @@ def solve_test_ald(s_fn, params, ics, t_int, sigmas, mu, key):
     t_int = t_int.reshape(-1, 1)
     keys = jax.random.split(key, n_samples)
     test_sol = []
-    for t in tqdm(t_int):
+    for t in tqdm(t_int, desc='ALD'):
         s = ald_vmap(keys, mu, t, sigmas, params)
         test_sol.append(s)
 

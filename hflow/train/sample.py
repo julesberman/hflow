@@ -98,28 +98,6 @@ def get_data_fn(sols, mu_data, t_data, quad_weights, bs_n, bs_t, scheme_t, schem
             t_idx = jnp.concatenate([start, t_idx, end])
             t_sample = t_data[t_idx]
             sols_sample = sols_sample[t_idx]
-        elif scheme_t == 'seq':
-            end = T-1
-
-            # if percent < 0.25:
-            #     t_sample = t_data
-
-            # else:
-            # print(percent)
-            groups = jnp.linspace(0.2, 1, 10)
-            closest = groups[jnp.argmin(jnp.abs(groups-percent))]
-            end = int(min(end*closest, end))
-            # t_sample = t_data[:end]
-            # sols_sample = sols_sample[:end]
-
-            t_idx = jax.random.choice(keyt, end, shape=(bs_t,), replace=False)
-            start, end = jnp.asarray([0]), jnp.asarray([end])
-            t_idx = jnp.concatenate([start, t_idx, end])
-            t_sample = t_data[t_idx]
-
-            # t_sample = jnp.linspace(0, 1, len(t_sample)).reshape(-1, 1)
-            sols_sample = sols_sample[t_idx]
-
         else:
             t_sample = t_data
 

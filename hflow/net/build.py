@@ -65,3 +65,16 @@ def build_colora(
     u_hat_fn = build_u_hat(u_apply, phi_unravel)
 
     return u_hat_fn, h_fn, theta_init, psi_init
+
+
+def build_mlp(
+    u_hat_config: dict,
+    in_dim: int,
+    out_dim: int,
+    key: Any = None
+):
+
+    net_u = DNN(**u_hat_config, out_dim=out_dim)
+    params_init, u_apply = init_net(net_u, in_dim, key=key)
+
+    return u_apply, params_init

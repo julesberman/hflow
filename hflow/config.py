@@ -8,13 +8,11 @@ from omegaconf import OmegaConf
 
 from hflow.misc.misc import epoch_time, unique_id
 
-# sweep configurationm, if empty will not sweep
-SWEEP = {}
 SWEEP = {
-    'problem': 'trap',
-    'optimizer.iters': '25_000,100_000',
-    'data.dim': '2,4',
-
+    'problem': 'vtwo',
+    'unet.model': 'colora',
+    'hnet.width': '15,32,64',
+    'unet.last_activation': 'none,tanh',
 }
 
 SLURM_CONFIG = {
@@ -31,7 +29,7 @@ class Network:
     model: str = 'colora'
     width: int = 64
     layers: List[str] = field(default_factory=lambda: [
-                              'C']*6)  # ['P',*['C']*7])
+                              'C']*7)  # ['P',*['C']*7])
     activation: str = 'swish'
     rank: int = 3
     full: bool = True
@@ -84,7 +82,7 @@ class Sample:
 class Test:
     run: bool = True
     dt: float = 1e-3
-    n_time_pts: int = 128
+    t_samples: Union[int, None] = 128
     n_samples: int = 20_000
     n_plot_samples: int = 2000
     plot_particles: bool = False
@@ -194,7 +192,7 @@ cs.store(name="default", node=Config)
 
 vlasov_config = Config(problem='vtwo',
                        data=Data(t_end=40, n_samples=10_000, dt=1e-2),
-                       unet=Network(width=64, layers=[*['C']*6]),
+                       unet=Network(width=64, layers=[*['C']*7]),
                        test=Test(plot_hist=True, electric=True, wass=True))
 
 

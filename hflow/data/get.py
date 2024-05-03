@@ -147,7 +147,7 @@ def get_data(problem, data_cfg: Data, key):
     R.RESULT['train_mus'] = train_mus
     R.RESULT['test_mus'] = test_mus
 
-    log.info(f'mus norm: {np.squeeze(mus)}')
+    log.info(f'mus_norm: {np.round(np.squeeze(mus),4)}')
 
     # R.RESULT['train_sols'] = train_sols
     # R.RESULT['test_sols'] = test_sols

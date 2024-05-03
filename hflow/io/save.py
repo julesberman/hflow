@@ -2,7 +2,9 @@ import pickle
 from pathlib import Path
 
 from hydra.core.hydra_config import HydraConfig
+from jax.experimental.host_callback import id_print, id_tap
 
+import hflow.io.result as R
 from hflow.config import Config
 from hflow.io.utils import (convert_jax_to_numpy, convert_list_to_numpy,
                             flatten_config, save_pickle)
@@ -31,3 +33,14 @@ def save_results(results: dict, cfg: Config):
     data = consolidate_results(results, cfg)
 
     save_pickle(output_path, data)
+
+
+def jit_save(data, key: str):
+
+    def save_on_host(data, transforms):
+        if not key in R.RESULT:
+            R.RESULT[key] = []
+
+        R.RESULT[key].append(data)
+
+    id_tap(save_on_host, data)

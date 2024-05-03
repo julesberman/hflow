@@ -26,7 +26,8 @@ def adam_opt(theta_init, loss_fn, args_fn, init_state=None, steps=1000, learning
             alpha=0.0
         )
 
-    opti_f = str_to_opt[optimizer]
+    optimizer_str = optimizer
+    opti_f = str_to_opt[optimizer_str]
     optimizer = opti_f(learning_rate=learning_rate)
 
     state = optimizer.init(theta_init)
@@ -42,7 +43,7 @@ def adam_opt(theta_init, loss_fn, args_fn, init_state=None, steps=1000, learning
         return loss_value, params, state
 
     params = theta_init
-    pbar = tqdm(range(steps), disable=not verbose)
+    pbar = tqdm(range(steps), disable=not verbose, desc=optimizer_str)
     opt_loss, opt_params = float('inf'), None
     loss_history, param_history = [], []
     n_rec = max(steps // 1000, 1)

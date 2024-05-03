@@ -13,12 +13,10 @@ from hflow.io.utils import log
 
 
 def compute_metrics(test_cfg: Test, true_sol, test_sol, mu_i):
-    # shape is T N D
-    T, N, D = true_sol.shape
-    idx = np.linspace(1, T-1, test_cfg.n_time_pts,
-                      endpoint=True, dtype=np.int32)
-    true_sol = true_sol[idx]
-    test_sol = test_sol[idx]
+
+    # truncate ic
+    true_sol = true_sol[1:]
+    test_sol = test_sol[1:]
 
     if test_cfg.mean:
         def get_metric(sol):
