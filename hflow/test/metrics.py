@@ -20,24 +20,30 @@ def compute_metrics(test_cfg: Test, true_sol, test_sol, mu_i):
 
     if test_cfg.mean:
         def get_metric(sol):
-            mm = np.mean(sol, axis=1)
-            var = np.var(sol, axis=1)
+            mm = np.mean(sol, axis=(1, 2))
+            var = np.var(sol, axis=(1, 2))
             return mm, var
 
         true_m, true_v = get_metric(true_sol)
         test_m, test_v = get_metric(test_sol)
 
-        t_err_m = np.linalg.norm(true_m - test_m, axis=1) / \
-            np.linalg.norm(true_m, axis=1)
+        t_err_m = np.abs(true_m - test_m) / np.abs(true_m)
+        t_err_v = np.abs(true_v - test_v) / np.abs(true_v)
+
+        mean_t_err_m = np.mean(t_err_m)
+        mean_t_err_v = np.mean(t_err_v)
 
         R.RESULT[f'time_mean_true_{mu_i}'] = true_m
         R.RESULT[f'time_mean_test_{mu_i}'] = test_m
         R.RESULT[f'time_mean_err_{mu_i}'] = t_err_m
-
-        mean_t_err_m = np.mean(t_err_m)
         R.RESULT[f'mean_mean_err_{mu_i}'] = mean_t_err_m
-
         log.info(f'mean_mean_err {mu_i}: {mean_t_err_m:.3e}')
+
+        R.RESULT[f'time_var_true_{mu_i}'] = true_v
+        R.RESULT[f'time_var_test_{mu_i}'] = test_v
+        R.RESULT[f'time_var_err_{mu_i}'] = t_err_v
+        R.RESULT[f'mean_var_err_{mu_i}'] = mean_t_err_v
+        log.info(f'mean_var_err {mu_i}: {mean_t_err_v:.3e}')
 
     if test_cfg.electric:
         true_electric = compute_electric_energy(true_sol)

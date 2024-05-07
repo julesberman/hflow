@@ -15,7 +15,7 @@ def get_loss_fn(loss_cfg: Loss, data_cfg: Data, s_fn):
     sigma = loss_cfg.sigma
     if loss_cfg.loss_fn == 'ov':
         loss_fn = OV_Loss(
-            s_fn, noise=noise, sigma=sigma, trace=loss_cfg.trace, batches=data_cfg.batches)
+            s_fn, noise=noise, sigma=sigma, trace=loss_cfg.trace, t_batches=loss_cfg.t_batches, n_batches=loss_cfg.n_batches)
     elif loss_cfg.loss_fn == 'ncsm':
         sigmas = generate_sigmas(loss_cfg)
         loss_fn = NCSM_Loss(s_fn, sigmas)
@@ -23,7 +23,7 @@ def get_loss_fn(loss_cfg: Loss, data_cfg: Data, s_fn):
     return loss_fn
 
 
-def OV_Loss(s, noise=0.0, sigma=0.0, return_interior=False, trace='true', batches=1):
+def OV_Loss(s, noise=0.0, sigma=0.0, return_interior=False, trace='true', t_batches=1, n_batches=1):
 
     def s_sep(mu, t, x, params):
         mu_t = jnp.concatenate([mu, t])
@@ -31,6 +31,7 @@ def OV_Loss(s, noise=0.0, sigma=0.0, return_interior=False, trace='true', batche
 
     s_dt = jacrev(s_sep, 1)
     s_dt_Vx = vmap(s_dt, (None, None, 0, None))
+
     s_Vx = vmap(s, in_axes=(None, 0, None))
     s_dx = jacrev(s, 1)
     s_dx_Vx = vmap(s_dx, in_axes=(None, 0, None))
@@ -38,9 +39,17 @@ def OV_Loss(s, noise=0.0, sigma=0.0, return_interior=False, trace='true', batche
     if trace == 'hutch':
         trace_dds = hess_trace_estimator(s, argnum=1)
         trace_dds_Vx = vmap(trace_dds, (None, None, 0, None))
+        # if n_batches > 1:
+        #     trace_dds_Vx = batchmap(trace_dds_Vx, n_batches,  argnum=2)
     else:
         trace_dds = tracewrap(jacfwd(s_dx, 1))
         trace_dds_Vx = vmap(trace_dds, (None, 0, None))
+        if n_batches > 1:
+            trace_dds_Vx = batchmap(trace_dds_Vx, n_batches,  argnum=1)
+    if n_batches > 1:
+        s_dt_Vx = batchmap(s_dt_Vx, n_batches, argnum=2)
+        s_Vx = batchmap(s_Vx, n_batches,  argnum=1)
+        s_dx_Vx = batchmap(s_dx_Vx, n_batches,  argnum=1)
 
     def loss_fn(params, x_t_batch, mu, t_batch, quad_weights, key):
         x_t_batch += jax.random.normal(key, x_t_batch.shape)*noise
@@ -83,8 +92,8 @@ def OV_Loss(s, noise=0.0, sigma=0.0, return_interior=False, trace='true', batche
             return (ut+gu+ent).mean()
 
         interior_loss = vmap(interior_loss)
-        if batches > 1:
-            interior_loss = batchmap(interior_loss, batches)
+        if t_batches > 1:
+            interior_loss = batchmap(interior_loss, t_batches)
         interior = interior_loss(xt_tensor)
 
         if quad_weights is not None:

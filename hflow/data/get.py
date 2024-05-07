@@ -9,6 +9,7 @@ from jax import jit, vmap
 
 import hflow.io.result as R
 from hflow.config import Data
+from hflow.data.lorenz9 import get_ic_lorenz9d, get_lorenz9d
 from hflow.data.mdyn import get_mdyn_sol
 from hflow.data.particles import (get_2d_bi, get_2d_lin, get_2d_van, get_ic_bi,
                                   get_ic_lin, get_ic_van)
@@ -57,6 +58,21 @@ def get_data(problem, data_cfg: Data, key):
             res = run_vlasov(n_samples, t_eval, mu, mode='two-stream')
             sols.append(res)
         sols = np.asarray(sols)
+    elif problem == 'lz9':
+
+        train_mus = np.asarray([14.10, 14.15, 14.2, 14.25])
+        test_mus = np.asarray([14.125, 14.175, 14.225])
+        mus = np.concatenate([train_mus, test_mus])
+
+        def solve_for_mu(mu):
+            drift, diffusion = get_lorenz9d(mu)
+            return solve_sde(drift, diffusion, t_eval, get_ic_lorenz9d, n_samples, dt=data_cfg.dt, key=key)
+        for mu in mus:
+            res = solve_for_mu(mu)
+            sols.append(res)
+        sols = np.asarray(sols)
+        sols = rearrange(sols, 'M N T D -> M T N D')
+
     elif problem == 'bi':
 
         train_mus = np.asarray([0.10, 0.20, 0.3])
@@ -86,9 +102,11 @@ def get_data(problem, data_cfg: Data, key):
         sols = vmap(jit(solve_for_mu))(mus)
         sols = rearrange(sols, 'M N T D -> M T N D')
     elif problem == 'trap':
-        train_mus = np.asarray([0.3, 0.35, 0.40, 0.45, 0.5])
-        test_mus = np.asarray([0.375, 0.4001, 0.425])
+        train_mus = np.asarray([0.2,  0.6,  1.0,  1.4])
+        test_mus = np.asarray([0.4, 0.8, 1.2])
 
+        # train_mus = np.asarray([0.2, 0.8, 1.4, 2.0])
+        # test_mus = np.asarray([0.5, 1.1, 1.7])
         mus = np.concatenate([train_mus, test_mus])
         system_dim = data_cfg.dim
 
@@ -98,8 +116,10 @@ def get_data(problem, data_cfg: Data, key):
         def solve_for_mu(mu):
             drift, diffusion = trap(mu)
             return solve_sde(drift, diffusion, t_eval, trap_ic, n_samples, dt=data_cfg.dt, key=key)
-
-        sols = vmap(jit(solve_for_mu))(mus)
+        for mu in mus:
+            res = solve_for_mu(mu)
+            sols.append(res)
+        sols = np.asarray(sols)
         sols = rearrange(sols, 'M N T D -> M T N D')
 
     elif problem == 'mdyn':

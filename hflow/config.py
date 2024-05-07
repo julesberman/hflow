@@ -9,16 +9,24 @@ from omegaconf import OmegaConf
 from hflow.misc.misc import epoch_time, unique_id
 
 SWEEP = {
-    'problem': 'vtwo',
-    'unet.model': 'colora',
-    'hnet.width': '15,32,64',
-    'unet.last_activation': 'none,tanh',
+    'problem': 'trap',
+    'optimizer.iters': '5_000,10_000,25_000',
+    'loss.loss_fn': 'ov',
+    'data.dim': '50,100,128',
+    'hnet.width': '15,32',
+    # 'unet.width': '64,120',
+    # 'loss.n_batches': '8',
+    # 'loss.t_batches': '8',
+    # 'sample.bs_n':  '128',
+    # 'sample.bs_t':  '256',
+    # 'unet.last_activation': 'none,tanh'
+
 }
 
 SLURM_CONFIG = {
-    'timeout_min': 60*5,
+    'timeout_min': 60*4,
     'cpus_per_task': 4,
-    'mem_gb': 25,
+    'mem_gb': 50,
     # 'gpus_per_node': 1,
     'gres': 'gpu'
 }
@@ -56,7 +64,6 @@ class Data:
     normalize: bool = True
     save: bool = False
     load: bool = False
-    batches: int = 1
     dim: Union[int, None] = None
 
 
@@ -68,6 +75,8 @@ class Loss:
     log: bool = False
     trace: str = 'hutch'
     L: int = 10
+    t_batches: int = 1
+    n_batches: int = 1
 
 
 @dataclass
@@ -103,7 +112,7 @@ class Config:
 
     unet: Network = field(default_factory=Network)
     hnet: Network = field(
-        default_factory=lambda: Network(width=64, layers=['D']*3))
+        default_factory=lambda: Network(width=15, layers=['D']*3))
     optimizer: Optimizer = field(default_factory=Optimizer)
     data: Data = field(default_factory=Data)
 
@@ -202,7 +211,8 @@ osc_config = Config(problem='bi',
 
 
 trap_config = Config(problem='trap',
-                     data=Data(t_end=3, dim=8, n_samples=10_000, dt=1e-2),
+                     data=Data(t_end=3, dim=100, n_samples=2500, dt=2e-2),
+                     sample=Sample(bs_n=128, bs_t=128),
                      test=Test(plot_particles=True, mean=True))
 
 
@@ -210,7 +220,11 @@ mdyn_config = Config(problem='mdyn',
                      data=Data(t_end=1, dim=2, n_samples=10_000, dt=2e-3),
                      test=Test(plot_particles=True, wass=True))
 
+lz9_config = Config(problem='lz9',
+                    data=Data(t_end=20, n_samples=10_000, dt=5e-2),
+                    test=Test(plot_particles=True, wass=True))
 
+cs.store(name="lz9", node=lz9_config)
 cs.store(name="mdyn", node=mdyn_config)
 cs.store(name="trap", node=trap_config)
 cs.store(name="osc", node=osc_config)
