@@ -12,6 +12,10 @@ from hflow.config import Test
 from hflow.io.utils import log
 
 
+def get_cov_diag(A):
+    return jnp.diag(jnp.cov(A, rowvar=False))
+
+
 def compute_metrics(test_cfg: Test, true_sol, test_sol, mu_i):
 
     # truncate ic
@@ -20,30 +24,39 @@ def compute_metrics(test_cfg: Test, true_sol, test_sol, mu_i):
 
     if test_cfg.mean:
         def get_metric(sol):
-            mm = np.mean(sol, axis=(1, 2))
-            var = np.var(sol, axis=(1, 2))
-            return mm, var
+            mm = np.mean(sol, axis=(1,))
+            cov = vmap(get_cov_diag)(sol)
+            return mm, cov
 
-        true_m, true_v = get_metric(true_sol)
-        test_m, test_v = get_metric(test_sol)
+        true_m, true_cov = get_metric(true_sol)
+        test_m, test_cov = get_metric(test_sol)
 
-        t_err_m = np.abs(true_m - test_m) / np.abs(true_m)
-        t_err_v = np.abs(true_v - test_v) / np.abs(true_v)
+        R.RESULT[f'full_mean_true{mu_i}'] = true_m
+        R.RESULT[f'full_cov_true_{mu_i}'] = true_cov
+        R.RESULT[f'full_mean_test{mu_i}'] = test_m
+        R.RESULT[f'full_cov_test_{mu_i}'] = test_cov
 
-        mean_t_err_m = np.mean(t_err_m)
-        mean_t_err_v = np.mean(t_err_v)
+        R.RESULT[f'time_mean_true{mu_i}'] = true_m[:, 0]
+        R.RESULT[f'time_cov_true_{mu_i}'] = true_cov[:, 0]
+        R.RESULT[f'time_mean_test{mu_i}'] = test_m[:, 0]
+        R.RESULT[f'time_cov_test_{mu_i}'] = test_cov[:, 0]
 
-        R.RESULT[f'time_mean_true_{mu_i}'] = true_m
-        R.RESULT[f'time_mean_test_{mu_i}'] = test_m
-        R.RESULT[f'time_mean_err_{mu_i}'] = t_err_m
-        R.RESULT[f'mean_mean_err_{mu_i}'] = mean_t_err_m
-        log.info(f'mean_mean_err {mu_i}: {mean_t_err_m:.3e}')
+        time_err_m = np.linalg.norm(
+            true_m - test_m, axis=(-1)) / np.linalg.norm(true_m, axis=(-1))
+        time_err_cov = np.linalg.norm(
+            true_cov - test_cov, axis=(-1)) / np.linalg.norm(true_cov, axis=(-1))
 
-        R.RESULT[f'time_var_true_{mu_i}'] = true_v
-        R.RESULT[f'time_var_test_{mu_i}'] = test_v
-        R.RESULT[f'time_var_err_{mu_i}'] = t_err_v
-        R.RESULT[f'mean_var_err_{mu_i}'] = mean_t_err_v
-        log.info(f'mean_var_err {mu_i}: {mean_t_err_v:.3e}')
+        R.RESULT[f'time_mean_err_{mu_i}'] = time_err_m
+        R.RESULT[f'time_cov_err_{mu_i}'] = time_err_cov
+
+        mean_err = np.mean(time_err_m)
+        cov_err = np.mean(time_err_cov)
+
+        R.RESULT[f'mean_mean_err_{mu_i}'] = mean_err
+        log.info(f'mean_mean_err {mu_i}: {mean_err:.3e}')
+
+        R.RESULT[f'mean_cov_err_{mu_i}'] = cov_err
+        log.info(f'mean_cov_err {mu_i}: {cov_err:.3e}')
 
     if test_cfg.electric:
         true_electric = compute_electric_energy(true_sol)

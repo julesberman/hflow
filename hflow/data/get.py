@@ -60,8 +60,8 @@ def get_data(problem, data_cfg: Data, key):
         sols = np.asarray(sols)
     elif problem == 'lz9':
 
-        train_mus = np.asarray([14.10, 14.15, 14.2, 14.25])
-        test_mus = np.asarray([14.125, 14.175, 14.225])
+        train_mus = np.asarray([12.0, 12.4, 12.6, 13.0])
+        test_mus = np.asarray([12.2, 12.8])
         mus = np.concatenate([train_mus, test_mus])
 
         def solve_for_mu(mu):
@@ -123,15 +123,15 @@ def get_data(problem, data_cfg: Data, key):
         sols = rearrange(sols, 'M N T D -> M T N D')
 
     elif problem == 'mdyn':
-        train_mus = np.asarray([0.0, 1, 1e1, 1e2, 1e3, 1e4])
-        test_mus = np.asarray([0.01, 5e1, 5e3])
+        train_mus = np.asarray([1.0, 3.0, 4.0, 6.0])
+        test_mus = np.asarray([2.0, 5.0])
         mus = np.concatenate([train_mus, test_mus])
         system_dim = data_cfg.dim
 
         mus = np.concatenate([train_mus, test_mus])
         for mu in mus:
-            res = get_mdyn_sol(key, system_dim, n_samples,
-                               gamma=0.1, alpha=mu, sigma=0, dt=data_cfg.dt)
+            res = get_mdyn_sol(key, system_dim, n_samples, mu,
+                               gamma=0.0, alpha=0.0, sigma=1e-1, dt=data_cfg.dt)
             sols.append(res)
         sols = np.asarray(sols)
 
@@ -152,14 +152,12 @@ def get_data(problem, data_cfg: Data, key):
 
     R.RESULT['t_eval'] = t_eval
 
-    if data_cfg.save:
-        save_data(problem, sols, mus, t_eval)
-
-    if data_cfg.load:
-        load_data(problem, sols, mus, t_eval)
-
     sols, mus, t_eval = normalize_dataset(
         sols, mus, t_eval, data_cfg.normalize)
+
+    if data_cfg.save:
+        save_data(problem, sols, np.squeeze(mus), np.squeeze(t_eval))
+        quit()
 
     train_sols, test_sols = sols[train_indices], sols[test_indices]
     train_mus, test_mus = mus[train_indices], mus[test_indices]

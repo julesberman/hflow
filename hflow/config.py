@@ -13,7 +13,8 @@ SWEEP = {
     'optimizer.iters': '5_000,10_000,25_000',
     'loss.loss_fn': 'ov',
     'data.dim': '50,100,128',
-    'hnet.width': '15,32',
+    'loss.noise': '0.0,1e-1'
+    # 'hnet.width': '15,32',
     # 'unet.width': '64,120',
     # 'loss.n_batches': '8',
     # 'loss.t_batches': '8',
@@ -24,7 +25,7 @@ SWEEP = {
 }
 
 SLURM_CONFIG = {
-    'timeout_min': 60*4,
+    'timeout_min': 60*1,
     'cpus_per_task': 4,
     'mem_gb': 50,
     # 'gpus_per_node': 1,
@@ -201,7 +202,6 @@ cs.store(name="default", node=Config)
 
 vlasov_config = Config(problem='vtwo',
                        data=Data(t_end=40, n_samples=10_000, dt=1e-2),
-                       unet=Network(width=64, layers=[*['C']*7]),
                        test=Test(plot_hist=True, electric=True, wass=True))
 
 
@@ -212,7 +212,7 @@ osc_config = Config(problem='bi',
 
 trap_config = Config(problem='trap',
                      data=Data(t_end=3, dim=100, n_samples=2500, dt=2e-2),
-                     sample=Sample(bs_n=128, bs_t=128),
+                     sample=Sample(bs_n=128, bs_t=256),
                      test=Test(plot_particles=True, mean=True))
 
 
@@ -221,7 +221,7 @@ mdyn_config = Config(problem='mdyn',
                      test=Test(plot_particles=True, wass=True))
 
 lz9_config = Config(problem='lz9',
-                    data=Data(t_end=20, n_samples=10_000, dt=5e-2),
+                    data=Data(t_end=25, n_samples=10_000, dt=1e-2),
                     test=Test(plot_particles=True, wass=True))
 
 cs.store(name="lz9", node=lz9_config)

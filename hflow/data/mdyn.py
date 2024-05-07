@@ -6,19 +6,21 @@ from jax import jit, vmap
 from matplotlib import pyplot as plt
 
 
-def get_V_cell(D):
+def get_V_cell(D, mu):
     pi = jnp.pi
 
     x0 = jnp.concatenate(
-        (0.95*jnp.array([jnp.cos(pi/6),   jnp.sin(pi/6)]), jnp.zeros(D-2)), axis=0)
+        (jnp.array([jnp.cos(pi/6),   jnp.sin(pi/6)]), jnp.zeros(D-2)), axis=0)
     x1 = jnp.concatenate(
-        (1.05*jnp.array([jnp.cos(5*pi/6), jnp.sin(5*pi/6)]), jnp.zeros(D-2)), axis=0)
+        (jnp.array([jnp.cos(5*pi/6), jnp.sin(5*pi/6)]), jnp.zeros(D-2)), axis=0)
     x2 = jnp.concatenate(
-        (1.00*jnp.array([jnp.cos(-pi/2),  jnp.sin(-pi/2)]), jnp.zeros(D-2)), axis=0)
+        (jnp.array([jnp.cos(-pi/2),  jnp.sin(-pi/2)]), jnp.zeros(D-2)), axis=0)
 
     @jit
     def V(x):
-        return 4 * jnp.sum((x - x0)**2) * jnp.sum((x - x1)**2) * jnp.sum((x - x2)**2)
+        r = mu * jnp.sum((x - x0)**2) * jnp.sum((x - x1)
+                                                ** 2) * jnp.sum((x - x2)**2)
+        return r
 
     return V
 
@@ -70,7 +72,7 @@ def plot_V(V, D, type):
     return im
 
 
-def get_mdyn_sol(key, dim, N, gamma=0.05, alpha=0, sigma=0.0, dt=5e-3, tau=None):
+def get_mdyn_sol(key, dim, N, mu, gamma=0.0, alpha=0, sigma=0.0, dt=5e-3, tau=None):
     # gamma is the width of the interaction kernel
     # alpha is the strength of the interaction
     # tau is the friction coefficient (tau = dt, alpha = 0 gives gradient flow)
@@ -78,7 +80,7 @@ def get_mdyn_sol(key, dim, N, gamma=0.05, alpha=0, sigma=0.0, dt=5e-3, tau=None)
         tau = dt
     SD_0 = 0.2
 
-    V = get_V_cell(dim)
+    V = get_V_cell(dim, mu)
     particles = SD_0 * random.normal(key, (N, dim))
 
     def interaction_potential(x, y):
