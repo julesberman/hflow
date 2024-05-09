@@ -10,10 +10,15 @@ from hflow.misc.misc import epoch_time, unique_id
 
 SWEEP = {
     'problem': 'trap',
-    'optimizer.iters': '5_000,10_000,25_000',
+    'optimizer.iters': '5_000',
     'loss.loss_fn': 'ov',
-    'data.dim': '50,100,128',
-    'loss.noise': '0.0,1e-1'
+    'sample.scheme_t': 'rand,gauss,trap,equi',
+    'sample.bs_t': '64,128,256',
+    'loss.sigma': '1e-2',
+    'data.dim': '3',
+    'sample.bs_n':  '256',
+    # 'loss.noise': '0.0,1e-1',
+    # 'loss.sigma': '0.0,5e-4,1e-3,5e-3,1e-2,5e-2,1e-1',
     # 'hnet.width': '15,32',
     # 'unet.width': '64,120',
     # 'loss.n_batches': '8',
@@ -211,8 +216,8 @@ osc_config = Config(problem='bi',
 
 
 trap_config = Config(problem='trap',
-                     data=Data(t_end=3, dim=100, n_samples=2500, dt=2e-2),
-                     sample=Sample(bs_n=128, bs_t=256),
+                     data=Data(t_end=2, dim=100, n_samples=5000, dt=7.5e-3),
+                     sample=Sample(bs_n=400, bs_t=256),
                      test=Test(plot_particles=True, mean=True))
 
 
@@ -221,7 +226,7 @@ mdyn_config = Config(problem='mdyn',
                      test=Test(plot_particles=True, wass=True))
 
 lz9_config = Config(problem='lz9',
-                    data=Data(t_end=25, n_samples=10_000, dt=1e-2),
+                    data=Data(t_end=20, n_samples=10_000, dt=1e-2),
                     test=Test(plot_particles=True, wass=True))
 
 cs.store(name="lz9", node=lz9_config)

@@ -22,6 +22,12 @@ def compute_metrics(test_cfg: Test, true_sol, test_sol, mu_i):
     true_sol = true_sol[1:]
     test_sol = test_sol[1:]
 
+    (d_shift, d_scale) = R.RESULT['data_norm']
+    d_shift, d_scale = d_shift[0], d_scale[0]
+
+    true_sol = (true_sol*d_scale)+d_shift
+    test_sol = (test_sol*d_scale)+d_shift
+
     if test_cfg.mean:
         def get_metric(sol):
             mm = np.mean(sol, axis=(1,))
@@ -31,14 +37,14 @@ def compute_metrics(test_cfg: Test, true_sol, test_sol, mu_i):
         true_m, true_cov = get_metric(true_sol)
         test_m, test_cov = get_metric(test_sol)
 
-        R.RESULT[f'full_mean_true{mu_i}'] = true_m
+        R.RESULT[f'full_mean_true_{mu_i}'] = true_m
         R.RESULT[f'full_cov_true_{mu_i}'] = true_cov
-        R.RESULT[f'full_mean_test{mu_i}'] = test_m
+        R.RESULT[f'full_mean_test_{mu_i}'] = test_m
         R.RESULT[f'full_cov_test_{mu_i}'] = test_cov
 
-        R.RESULT[f'time_mean_true{mu_i}'] = true_m[:, 0]
+        R.RESULT[f'time_mean_true_{mu_i}'] = true_m[:, 0]
         R.RESULT[f'time_cov_true_{mu_i}'] = true_cov[:, 0]
-        R.RESULT[f'time_mean_test{mu_i}'] = test_m[:, 0]
+        R.RESULT[f'time_mean_test_{mu_i}'] = test_m[:, 0]
         R.RESULT[f'time_cov_test_{mu_i}'] = test_cov[:, 0]
 
         time_err_m = np.linalg.norm(
@@ -110,7 +116,7 @@ def compute_electric_energy(sol):
 
     sol = sol[:, :N*8]
 
-    boxsize = 1  # not 50 because everything should be normalized
+    boxsize = 50  # not 50 because everything should be normalized
     sol = np.mod(sol, boxsize)
     sol[sol == 0.0] = 1e-5
     sol[sol == 1.0] = (1-1e-5)
@@ -128,6 +134,4 @@ def compute_electric_energy(sol):
     # calculate electric energy at all times
     E = - 0.5 * np.mean(phi, axis=1)
 
-    true_box = 50
-
-    return E * true_box**2
+    return E

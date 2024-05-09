@@ -30,6 +30,7 @@ jaxlib==0.4.23
 
 Run a problem with problem specific default settings (recommended)
 ```
+python hflow/run.py -cn=trap
 python hflow/run.py -cn=mdyn
 python hflow/run.py -cn=osc problem=bi
 python hflow/run.py -cn=vlasov problem=vtwo
@@ -65,4 +66,5 @@ The run the command using `--multirun` flag:
 python hflow/run.py --multirun -cn=vlasov problem=vtwo
 python hflow/run.py --multirun -cn=vlasov problem=vbump
 python hflow/run.py --multirun -cn=trap
+python hflow/run.py --multirun -cn=lz9 name=study_sigma
 ```

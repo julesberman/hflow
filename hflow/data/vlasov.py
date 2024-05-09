@@ -1,8 +1,8 @@
-
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.sparse as sp
 from einops import rearrange
+from jax import random as jrandom
 from scipy.sparse.linalg import spsolve
 
 """
@@ -36,16 +36,19 @@ Calculate the acceleration on each particle due to electric field
     jp1 = j+1
     weight_j = (jp1*dx - pos)/dx
     weight_jp1 = (pos - j*dx)/dx
+    j = np.mod(j, Nx)   # periodic BC
     jp1 = np.mod(jp1, Nx)   # periodic BC
-    j = np.mod(j, Nx)   # periodic BC ensures no crash
 
     n = np.bincount(j[:, 0],   weights=weight_j[:, 0],   minlength=Nx)
     n += np.bincount(jp1[:, 0], weights=weight_jp1[:, 0], minlength=Nx)
     n *= n0 * boxsize / N / dx
     n_eff = n - n0
     n_eff[-1] = 0
+    n_eff = n - n0
+    n_eff[-1] = 0
 
     # Solve Poisson's Equation: laplacian(phi) = n-n0
+    phi_grid = spsolve(Lmtx, n_eff, permc_spec="MMD_AT_PLUS_A")
     phi_grid = spsolve(Lmtx, n_eff, permc_spec="MMD_AT_PLUS_A")
 
     # Apply Derivative to get the Electric field
@@ -74,6 +77,13 @@ def get_gradient_matrix(Nx, boxsize):
     Gmtx = sp.csr_matrix(Gmtx)
     return Gmtx
 
+    return Gmtx
+
+
+def get_laplacian_matrix(Nx, boxsize):
+    dx = boxsize/Nx
+    e = np.ones(Nx)
+
 
 def get_laplacian_matrix(Nx, boxsize):
     dx = boxsize/Nx
@@ -86,12 +96,15 @@ def get_laplacian_matrix(Nx, boxsize):
     Lmtx[Nx-1, 0] = 1
     Lmtx /= dx**2
     Lmtx[-1, :] = 1/Nx
+    Lmtx[-1, :] = 1/Nx
     Lmtx = sp.csr_matrix(Lmtx)
     return Lmtx
 
 
-def run_vlasov(n_samples, t_eval, mu=1.0, mode='two-stream'):
-    np.random.seed(1)
+def run_vlasov(n_samples, t_eval, mu=1.0, mode='two-stream', eta=0, seed=0):
+
+    np.random.seed(seed=seed)
+
     dt = t_eval[1] - t_eval[0]
     Nt = len(t_eval)
 
@@ -99,6 +112,7 @@ def run_vlasov(n_samples, t_eval, mu=1.0, mode='two-stream'):
     # two beams, at velocities v_1 and v_2 with widths vth_1 and vth_2
     # fractions of electrons in each beam are n1 and n2
     # spatial pertubation with amplitude eps, wavenumber kappa
+    # collison frequency eta
 
     # Bump-on-tail:
     # v_1 = -0, v_2 = 4, vth_1 = 1, vth_2 = 0.5, n1 = 0.9, n2 = 0.1, eps = 0.05, mu 1 or larger
@@ -126,6 +140,7 @@ def run_vlasov(n_samples, t_eval, mu=1.0, mode='two-stream'):
     n0 = 1            # electron number density
     eps = 0.05
     lamb = mu/1
+    v_th_coll = 1  # diffusivity is eta * v_th_coll**2
 
     n_1 = int(n_1 * n_samples)
     n_2 = n_samples - n_1
@@ -161,6 +176,7 @@ def run_vlasov(n_samples, t_eval, mu=1.0, mode='two-stream'):
         sols[i, :, 0] = np.squeeze(pos)
         sols[i, :, 1] = np.squeeze(vel)
         # sols[i, :, 2] = np.squeeze(phi)
+        # sols[i, :, 2] = np.squeeze(phi)
         # (1/2) kick
         vel += acc * dt/2.0
 
@@ -173,6 +189,12 @@ def run_vlasov(n_samples, t_eval, mu=1.0, mode='two-stream'):
 
         # (1/2) kick
         vel += acc * dt/2.0
+
+        # collisions at the end
+        if eta > 0:
+            vel -= eta * dt * vel
+            vel += eta * v_th_coll**2 * dt**0.5 * \
+                np.random.rand(vel.shape[0], 1)
 
         # update time
         t += dt

@@ -45,7 +45,7 @@ def test_model(cfg: Config, data, s_fn, opt_params, key):
             test_sol = solve_test_sde(s_fn, opt_params, ics[mu_i], t_int,
                                       test_cfg.dt, sigma, mus[mu_i], key)
         elif cfg.loss.loss_fn == 'ncsm':
-            sigmas = generate_sigmas(cfg.loss)
+            sigmas = generate_sigmas(cfg.loss.L)
             test_sol = solve_test_ald(
                 s_fn, opt_params, ics[mu_i], t_int, sigmas, mus[mu_i], key)
 

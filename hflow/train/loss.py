@@ -17,7 +17,7 @@ def get_loss_fn(loss_cfg: Loss, data_cfg: Data, s_fn):
         loss_fn = OV_Loss(
             s_fn, noise=noise, sigma=sigma, trace=loss_cfg.trace, t_batches=loss_cfg.t_batches, n_batches=loss_cfg.n_batches)
     elif loss_cfg.loss_fn == 'ncsm':
-        sigmas = generate_sigmas(loss_cfg)
+        sigmas = generate_sigmas(loss_cfg.L)
         loss_fn = NCSM_Loss(s_fn, sigmas)
 
     return loss_fn
@@ -52,7 +52,14 @@ def OV_Loss(s, noise=0.0, sigma=0.0, return_interior=False, trace='true', t_batc
         s_dx_Vx = batchmap(s_dx_Vx, n_batches,  argnum=1)
 
     def loss_fn(params, x_t_batch, mu, t_batch, quad_weights, key):
-        x_t_batch += jax.random.normal(key, x_t_batch.shape)*noise
+
+        # a = generate_sigmas(10)
+        # noise = jax.random.choice(keyn, a)
+        if noise > 0:
+            keyn, keym = jax.random.split(key, num=2)
+            a = generate_sigmas(10, end=5e-3)
+            noise_amt = jax.random.choice(keyn, a)
+            x_t_batch += jax.random.normal(keym, x_t_batch.shape)*noise_amt
 
         t_batch = jnp.hstack([jnp.ones((len(t_batch), len(mu))) * mu, t_batch])
 
@@ -78,10 +85,14 @@ def OV_Loss(s, noise=0.0, sigma=0.0, return_interior=False, trace='true', t_batc
             # entropic
             if sigma > 0.0:
                 if trace == 'hutch':
-                    gu, tra = trace_dds_Vx(key, mu_t, x_batch, params)
+                    seed = jax.random.uniform(key, shape=()) + mu + t
+                    seed = jnp.linalg.norm(seed)
+                    keyt = jax.random.PRNGKey((seed*1e8).astype(int))
+                    gu, tra = trace_dds_Vx(keyt, mu_t, x_batch, params)
                 else:
                     tra = trace_dds_Vx(mu_t, x_batch, params)
                     gu = s_dx_Vx(mu_t, x_batch, params)
+
                 ent = tra*sigma**2*0.5
             else:
                 gu = s_dx_Vx(mu_t, x_batch, params)
@@ -153,10 +164,8 @@ def NCSM_Loss(s, sigmas):
     return loss_fn
 
 
-def generate_sigmas(cfg_loss: Loss):
-    start = 1
-    end = 1e-2
-    L = cfg_loss.L
+def generate_sigmas(L, start=1, end=1e-2):
+
     sigmas = jnp.asarray([start * (end / start) ** (i / (L - 1))
                           for i in range(L)]).reshape(-1, 1)
     return sigmas

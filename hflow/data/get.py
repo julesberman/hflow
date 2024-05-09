@@ -32,11 +32,12 @@ def get_data(problem, data_cfg: Data, key):
     sols = []
 
     if problem == 'vbump':
-        train_mus = np.asarray([1.0, 1.2, 1.4, 1.6])
-        test_mus = np.asarray([1.1, 1.3, 1.5])
+        train_mus = np.asarray([1.3, 1.4, 1.5, 1.6, 1.7, 1.8])
+        test_mus = np.asarray([1.35, 1.55, 1.75])
         mus = np.concatenate([train_mus, test_mus])
         for mu in mus:
-            res = run_vlasov(n_samples, t_eval, mu, mode='bump-on-tail')
+            res = run_vlasov(n_samples, t_eval, mu,
+                             mode='bump-on-tail', eta=1e-3)
             sols.append(res)
         sols = np.asarray(sols)
     elif problem == 'vsingle':
@@ -60,8 +61,8 @@ def get_data(problem, data_cfg: Data, key):
         sols = np.asarray(sols)
     elif problem == 'lz9':
 
-        train_mus = np.asarray([12.0, 12.4, 12.6, 13.0])
-        test_mus = np.asarray([12.2, 12.8])
+        train_mus = np.asarray([12.1, 12.2, 12.3, 12.5, 12.6, 12.7])
+        test_mus = np.asarray([12.4])
         mus = np.concatenate([train_mus, test_mus])
 
         def solve_for_mu(mu):
@@ -102,8 +103,8 @@ def get_data(problem, data_cfg: Data, key):
         sols = vmap(jit(solve_for_mu))(mus)
         sols = rearrange(sols, 'M N T D -> M T N D')
     elif problem == 'trap':
-        train_mus = np.asarray([0.2,  0.6,  1.0,  1.4])
-        test_mus = np.asarray([0.4, 0.8, 1.2])
+        train_mus = np.asarray([0.3, 0.4, 0.5, 0.7, 0.8, 0.9])
+        test_mus = np.asarray([0.6])
 
         # train_mus = np.asarray([0.2, 0.8, 1.4, 2.0])
         # test_mus = np.asarray([0.5, 1.1, 1.7])

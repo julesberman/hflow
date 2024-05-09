@@ -20,52 +20,56 @@ def get_arg_fn(sample_cfg: Sample, data):
     log.info("gettings samples...")
     sols, mu_data, t_data = data
     bs_t = sample_cfg.bs_t
+    bs_n = sample_cfg.bs_n
     quad_weights = None
     M, T, N, D = sols.shape
-    bs_t = min(sample_cfg.bs_t, T)
-    bs_n = min(sample_cfg.bs_n, N)
-    sols = rearrange(sols, 'M T N D -> T M N D')
-    t_data = t_data / t_data[-1]
-    if sample_cfg.scheme_t == 'gauss':
 
+    t_data = t_data / t_data[-1]
+
+    if sample_cfg.scheme_t == 'gauss':
         g_pts_01, quad_weights = gauss_quadrature_weights_points(
             bs_t, a=0.0, b=1.0)
-
         start, end = jnp.asarray([0]), jnp.asarray([1.0])
         g_pts_01 = jnp.concatenate([start, g_pts_01, end])
-        # interp
-        sols = interplate_in_t(sols, t_data, g_pts_01)
-        t_data = g_pts_01
 
-    elif sample_cfg.scheme_t == 'piece':
+    # elif sample_cfg.scheme_t == 'piece':
 
-        pts_per_seg = bs_t
-        segs = bs_t // pts_per_seg
+    #     pts_per_seg = bs_t
+    #     segs = bs_t // pts_per_seg
 
-        t_split = jnp.array_split(t_data, segs)
-        quad_weights = []
-        t_gauss = []
+    #     t_split = jnp.array_split(t_data, segs)
+    #     quad_weights = []
+    #     t_gauss = []
 
-        for t_sl in t_split:
-            g_pts_t, qw = gauss_quadrature_weights_points(
-                pts_per_seg, a=t_sl[0], b=t_sl[-1])
-            t_gauss.append(g_pts_t)
-            quad_weights.append(qw)
+    #     for t_sl in t_split:
+    #         g_pts_t, qw = gauss_quadrature_weights_points(
+    #             pts_per_seg, a=t_sl[0], b=t_sl[-1])
+    #         t_gauss.append(g_pts_t)
+    #         quad_weights.append(qw)
 
-        start, end = jnp.asarray([0]), jnp.asarray([1.0])
-        g_pts_01 = jnp.concatenate([start, *t_gauss, end])
-        quad_weights = jnp.concatenate(quad_weights)
-
-        # interp
-        sols = interplate_in_t(sols, t_data, g_pts_01)
-        t_data = g_pts_01
+    #     start, end = jnp.asarray([0]), jnp.asarray([1.0])
+    #     g_pts_01 = jnp.concatenate([start, *t_gauss, end])
+    #     quad_weights = jnp.concatenate(quad_weights)
 
     elif sample_cfg.scheme_t == 'equi':
         g_pts_01 = jnp.linspace(0.0, 1.0, bs_t+2)
-        sols = interplate_in_t(sols, t_data, g_pts_01)
-        t_data = g_pts_01
 
-    sols = rearrange(sols, 'T M N D -> M T N D')
+    elif sample_cfg.scheme_t == 'trap':
+        g_pts_01 = jnp.linspace(0.0, 1.0, bs_t)
+        quad_weights = jnp.ones((bs_t,)) * g_pts_01[1]
+        quad_weights = quad_weights.at[0].set(0.5*quad_weights[0])
+        quad_weights = quad_weights.at[-1].set(0.5*quad_weights[-1])
+        start, end = jnp.asarray([0]), jnp.asarray([1.0])
+        g_pts_01 = jnp.concatenate([start, g_pts_01, end])
+
+    new_sols = []
+    for i, sol_mu in enumerate(sols):
+        ss = interplate_in_t(sol_mu, t_data, g_pts_01)
+        new_sols.append(ss)
+
+    sols = np.asarray(new_sols)
+    t_data = g_pts_01
+
     log.info(f'sample shape {sols.shape}')
     args_fn = get_data_fn(sols, mu_data, t_data, quad_weights,
                           bs_n, bs_t, sample_cfg.scheme_t, sample_cfg.scheme_n)
@@ -117,7 +121,7 @@ def get_data_fn(sols, mu_data, t_data, quad_weights, bs_n, bs_t, scheme_t, schem
 
 def interplate_in_t(sols, true_t, interp_t):
     sols = np.asarray(sols)
-    T, M, N, D = sols.shape
+    T, N, D = sols.shape
 
     data_spacing = [np.linspace(0.0, 1.0, n) for n in sols.shape[1:]]
     spacing = [np.squeeze(true_t), *data_spacing]
@@ -129,5 +133,5 @@ def interplate_in_t(sols, true_t, interp_t):
     x_pts = pts_array_from_space(interp_spacing)
     interp_sols = gt_f(x_pts)
 
-    interp_sols = rearrange(interp_sols, '(T M N D) -> T M N D', M=M, N=N, D=D)
+    interp_sols = rearrange(interp_sols, '(T N D) -> T N D', N=N, D=D)
     return interp_sols
