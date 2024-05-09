@@ -52,15 +52,18 @@ def get_arg_fn(sample_cfg: Sample, data):
     #     quad_weights = jnp.concatenate(quad_weights)
 
     elif sample_cfg.scheme_t == 'equi':
-        g_pts_01 = jnp.linspace(0.0, 1.0, bs_t+2)
+        g_pts_01 = jnp.linspace(0.0, 1.0, bs_t)
+        start, end = jnp.asarray([0]), jnp.asarray([1.0])
+        g_pts_01 = jnp.concatenate([start, g_pts_01, end])
 
     elif sample_cfg.scheme_t == 'trap':
         g_pts_01 = jnp.linspace(0.0, 1.0, bs_t)
         quad_weights = jnp.ones((bs_t,)) * g_pts_01[1]
-        quad_weights = quad_weights.at[0].set(0.5*quad_weights[0])
-        quad_weights = quad_weights.at[-1].set(0.5*quad_weights[-1])
         start, end = jnp.asarray([0]), jnp.asarray([1.0])
         g_pts_01 = jnp.concatenate([start, g_pts_01, end])
+
+        quad_weights = quad_weights.at[0].set(0.5*quad_weights[0])
+        quad_weights = quad_weights.at[-1].set(0.5*quad_weights[-1])
 
     if sample_cfg.scheme_t != 'rand':
         new_sols = []

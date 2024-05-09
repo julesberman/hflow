@@ -10,10 +10,11 @@ from hflow.misc.misc import epoch_time, unique_id
 
 SWEEP = {
     'problem': 'bi',
-    'optimizer.iters': '5_000',
+    'optimizer.iters': '10_000,25_000',
     'loss.loss_fn': 'ov',
     'sample.scheme_t': 'rand,trap,equi,gauss',
-    'sample.bs_t': '128,256',
+    'sample.bs_t': '256',
+    'sample.bs_n': '256,512',
     # 'loss.sigma': '1e-2',
     # 'data.dim': '3',
     # 'sample.bs_n':  '256',
@@ -30,7 +31,7 @@ SWEEP = {
 }
 
 SLURM_CONFIG = {
-    'timeout_min': 60*1,
+    'timeout_min': 60*3,
     'cpus_per_task': 4,
     'mem_gb': 50,
     # 'gpus_per_node': 1,
@@ -211,7 +212,7 @@ vlasov_config = Config(problem='vtwo',
 
 
 osc_config = Config(problem='bi',
-                    data=Data(t_end=14, dt=1e-2),
+                    data=Data(t_end=12, dt=1e-2, n_samples=25_000),
                     test=Test(plot_particles=True, mean=True, wass=True))
 
 

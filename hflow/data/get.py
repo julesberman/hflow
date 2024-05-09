@@ -76,8 +76,8 @@ def get_data(problem, data_cfg: Data, key):
 
     elif problem == 'bi':
 
-        train_mus = np.asarray([0.10, 0.20, 0.3])
-        test_mus = np.asarray([0.15, 0.25])
+        train_mus = np.asarray([0.10, 0.15, 0.25, 0.3])
+        test_mus = np.asarray([0.2])
         mus = np.concatenate([train_mus, test_mus])
 
         def solve_for_mu(mu):
