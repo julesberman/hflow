@@ -39,8 +39,6 @@ def OV_Loss(s, noise=0.0, sigma=0.0, return_interior=False, trace='true', t_batc
     if trace == 'hutch':
         trace_dds = hess_trace_estimator(s, argnum=1)
         trace_dds_Vx = vmap(trace_dds, (None, None, 0, None))
-        # if n_batches > 1:
-        #     trace_dds_Vx = batchmap(trace_dds_Vx, n_batches,  argnum=2)
     else:
         trace_dds = tracewrap(jacfwd(s_dx, 1))
         trace_dds_Vx = vmap(trace_dds, (None, 0, None))
@@ -53,20 +51,13 @@ def OV_Loss(s, noise=0.0, sigma=0.0, return_interior=False, trace='true', t_batc
 
     def loss_fn(params, x_t_batch, mu, t_batch, quad_weights, key):
 
-        # a = generate_sigmas(10)
-        # noise = jax.random.choice(keyn, a)
-        if noise > 0:
-            keyn, keym = jax.random.split(key, num=2)
-            a = generate_sigmas(10, end=5e-3)
-            noise_amt = jax.random.choice(keyn, a)
-            x_t_batch += jax.random.normal(keym, x_t_batch.shape)*noise_amt
-
-        t_batch = jnp.hstack([jnp.ones((len(t_batch), len(mu))) * mu, t_batch])
-
         T, N, D = x_t_batch.shape
         T, MT = t_batch.shape
-        bound = s_Vx(t_batch[0], x_t_batch[0], params) - \
-            s_Vx(t_batch[-1], x_t_batch[-1], params)
+        mu_t_0, mu_t_1 = jnp.concatenate(
+            [mu, t_batch[0]]),  jnp.concatenate([mu, t_batch[-1]])
+
+        bound = s_Vx(mu_t_0, x_t_batch[0], params) - \
+            s_Vx(mu_t_1, x_t_batch[-1], params)
 
         x_t_batch = x_t_batch[1:-1]
         t_batch = t_batch[1:-1]
@@ -75,10 +66,11 @@ def OV_Loss(s, noise=0.0, sigma=0.0, return_interior=False, trace='true', t_batc
         xt_tensor = jnp.hstack([xt_tensor, t_batch])
 
         def interior_loss(xt_tensor):
-            x_batch, mu_t = xt_tensor[:-MT], xt_tensor[-MT:]
+            x_batch, t = xt_tensor[:-MT], xt_tensor[-MT:]
             x_batch = rearrange(x_batch, '(N D) -> N D', D=D)
 
-            mu, t = mu_t[:-1], mu_t[-1:]
+            mu_t = jnp.concatenate([mu, t])
+
             ut = s_dt_Vx(mu, t, x_batch, params)
             ut = jnp.squeeze(ut)
 

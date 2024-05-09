@@ -62,13 +62,14 @@ def get_arg_fn(sample_cfg: Sample, data):
         start, end = jnp.asarray([0]), jnp.asarray([1.0])
         g_pts_01 = jnp.concatenate([start, g_pts_01, end])
 
-    new_sols = []
-    for i, sol_mu in enumerate(sols):
-        ss = interplate_in_t(sol_mu, t_data, g_pts_01)
-        new_sols.append(ss)
+    if sample_cfg.scheme_t != 'rand':
+        new_sols = []
+        for i, sol_mu in enumerate(sols):
+            ss = interplate_in_t(sol_mu, t_data, g_pts_01)
+            new_sols.append(ss)
 
-    sols = np.asarray(new_sols)
-    t_data = g_pts_01
+        sols = np.asarray(new_sols)
+        t_data = g_pts_01
 
     log.info(f'sample shape {sols.shape}')
     args_fn = get_data_fn(sols, mu_data, t_data, quad_weights,
