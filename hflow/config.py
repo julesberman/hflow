@@ -9,14 +9,14 @@ from omegaconf import OmegaConf
 from hflow.misc.misc import epoch_time, unique_id
 
 SWEEP = {
-    'problem': 'trap',
+    'problem': 'bi',
     'optimizer.iters': '5_000',
     'loss.loss_fn': 'ov',
     'sample.scheme_t': 'rand,trap,equi,gauss',
-    'sample.bs_t': '32,64,128,256',
-    'loss.sigma': '1e-2',
-    'data.dim': '3',
-    'sample.bs_n':  '256',
+    'sample.bs_t': '128,256',
+    # 'loss.sigma': '1e-2',
+    # 'data.dim': '3',
+    # 'sample.bs_n':  '256',
     # 'loss.noise': '0.0,1e-1',
     # 'loss.sigma': '0.0,5e-4,1e-3,5e-3,1e-2,5e-2,1e-1',
     # 'hnet.width': '15,32',
@@ -211,13 +211,13 @@ vlasov_config = Config(problem='vtwo',
 
 
 osc_config = Config(problem='bi',
-                    data=Data(t_end=20),
-                    test=Test(plot_particles=True))
+                    data=Data(t_end=14, dt=1e-2),
+                    test=Test(plot_particles=True, mean=True, wass=True))
 
 
 trap_config = Config(problem='trap',
                      data=Data(t_end=2, dim=100, n_samples=5000, dt=7.5e-3),
-                     sample=Sample(bs_n=400, bs_t=256),
+                     sample=Sample(bs_n=256, bs_t=256),
                      test=Test(plot_particles=True, mean=True))
 
 

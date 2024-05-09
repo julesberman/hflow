@@ -63,6 +63,7 @@ SLURM_CONFIG = {
 ```
 The run the command using `--multirun` flag:
 ```
+python hflow/run.py --multirun -cn=osc problem=bi
 python hflow/run.py --multirun -cn=vlasov problem=vtwo
 python hflow/run.py --multirun -cn=vlasov problem=vbump
 python hflow/run.py --multirun -cn=trap
