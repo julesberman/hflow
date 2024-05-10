@@ -10,7 +10,7 @@ ground_truth
 .vscode
 .ipynb_checkpoints
 .zshrc
-
+qsubs
 
 ###################
 # PYTHON DEFAULTS #
