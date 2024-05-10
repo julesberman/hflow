@@ -1,4 +1,5 @@
 import os
+import time
 from functools import partial
 from pathlib import Path
 
@@ -14,7 +15,7 @@ from hflow.data.mdyn import get_mdyn_sol
 from hflow.data.particles import (get_2d_bi, get_2d_lin, get_2d_van, get_ic_bi,
                                   get_ic_lin, get_ic_van)
 from hflow.data.sde import solve_sde
-from hflow.data.trap import get_ic_trap, get_trap
+from hflow.data.trap import get_ic_trap, get_ic_trap2, get_trap, get_trap2
 from hflow.data.utils import normalize
 from hflow.data.vlasov import run_vlasov
 from hflow.io.utils import log, save_pickle
@@ -35,9 +36,12 @@ def get_data(problem, data_cfg: Data, key):
         train_mus = np.asarray([1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0])
         test_mus = np.asarray([1.35, 1.95])
         mus = np.concatenate([train_mus, test_mus])
-        for mu in mus:
+        for mu_i, mu in enumerate(mus):
+            start = time.time()
             res = run_vlasov(n_samples, t_eval, mu,
                              mode='bump-on-tail', eta=1e-3)
+            end = time.time()
+            R.RESULT[f'FOM_integrate_time_{mu_i}'] = end-start
             sols.append(res)
         sols = np.asarray(sols)
     elif problem == 'vtwo':
@@ -47,8 +51,11 @@ def get_data(problem, data_cfg: Data, key):
         train_mus = np.asarray([1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9])
         test_mus = np.asarray([1.25, 1.85])
         mus = np.concatenate([train_mus, test_mus])
-        for mu in mus:
+        for mu_i, mu in enumerate(mus):
+            start = time.time()
             res = run_vlasov(n_samples, t_eval, mu, mode='two-stream')
+            end = time.time()
+            R.RESULT[f'FOM_integrate_time_{mu_i}'] = end-start
             sols.append(res)
         sols = np.asarray(sols)
     elif problem == 'lz9':
@@ -97,14 +104,26 @@ def get_data(problem, data_cfg: Data, key):
     elif problem == 'trap':
         train_mus = np.asarray([0.3, 0.4, 0.5, 0.7, 0.8, 0.9])
         test_mus = np.asarray([0.6])
-
-        # train_mus = np.asarray([0.2, 0.8, 1.4, 2.0])
-        # test_mus = np.asarray([0.5, 1.1, 1.7])
         mus = np.concatenate([train_mus, test_mus])
         system_dim = data_cfg.dim
-
         trap = partial(get_trap, system_dim)
         trap_ic = partial(get_ic_trap, system_dim)
+
+        def solve_for_mu(mu):
+            drift, diffusion = trap(mu)
+            return solve_sde(drift, diffusion, t_eval, trap_ic, n_samples, dt=data_cfg.dt, key=key)
+        for mu in mus:
+            res = solve_for_mu(mu)
+            sols.append(res)
+        sols = np.asarray(sols)
+        sols = rearrange(sols, 'M N T D -> M T N D')
+    elif problem == 'trap2':
+        train_mus = np.asarray([1.0, 1.25, 1.75, 2.0, 2.25, 2.75, 3.0])
+        test_mus = np.asarray([1.5, 2.5])
+        mus = np.concatenate([train_mus, test_mus])
+        system_dim = data_cfg.dim
+        trap = partial(get_trap2, system_dim)
+        trap_ic = partial(get_ic_trap2, system_dim)
 
         def solve_for_mu(mu):
             drift, diffusion = trap(mu)

@@ -1,3 +1,5 @@
+import time
+
 import jax
 import jax.numpy as jnp
 import matplotlib.pyplot as plt
@@ -41,6 +43,8 @@ def test_model(cfg: Config, data, s_fn, opt_params, key):
     for mu_i in range(len(mus)):
         log.info(f'testing mu {mus[mu_i]} {mu_i}')
         true_sol = sol[mu_i]
+
+        start = time.time()
         if cfg.loss.loss_fn == 'ov':
             test_sol = solve_test_sde(s_fn, opt_params, ics[mu_i], t_int,
                                       test_cfg.dt, sigma, mus[mu_i], key)
@@ -49,7 +53,10 @@ def test_model(cfg: Config, data, s_fn, opt_params, key):
             test_sol = solve_test_ald(
                 s_fn, opt_params, ics[mu_i], t_int, sigmas, mus[mu_i], key)
         elif cfg.loss.loss_fn == 'cfm':
-            test_sol = solve_test_cfm(s_fn, opt_params, ics, t_int, mus[mu_i])
+            test_sol = solve_test_cfm(
+                s_fn, opt_params, ics[mu_i], t_int, mus[mu_i])
+        end = time.time()
+        R.RESULT[f'test_integrate_time_{mu_i}'] = end-start
 
         if test_cfg.save_sol:
             # R.RESULT[f'true_sol_{mu_i}'] = true_sol
@@ -76,6 +83,7 @@ def solve_test_cfm(s_fn, params, ics, t_int, mu):
             return s_Vx(mu_t_tau, y, params)
 
         sol = odeint_euler(fn, ics, taus)
+
         return sol[-1]
 
     test_sol = []
@@ -86,7 +94,6 @@ def solve_test_cfm(s_fn, params, ics, t_int, mu):
     test_sol = jnp.asarray(test_sol)
     test_sol = jnp.squeeze(test_sol)
 
-    print(test_sol.shape)
     return test_sol
 
 

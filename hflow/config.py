@@ -9,12 +9,12 @@ from omegaconf import OmegaConf
 from hflow.misc.misc import epoch_time, unique_id
 
 SWEEP = {
-    'problem': 'bi',
+    'problem': 'lz9',
     'loss.loss_fn': 'ov',
-    'optimizer.iters': '50_000',
+    'optimizer.iters': '25_000',
     'sample.scheme_t': 'rand,gauss',
     'sample.bs_t': '256',
-    'seed': '1,2,3,4,5,6,7,8'
+    'seed': '1,2,3'
     # 'sample.bs_n': '256,512',
     # 'loss.sigma': '1e-2',
     # 'data.dim': '3',
@@ -209,8 +209,8 @@ cs.store(name="default", node=Config)
 
 vlasov_config = Config(problem='vtwo',
                        loss=Loss(sigma=1e-2),
-                       data=Data(t_end=40, n_samples=10_000, dt=1e-2),
-                       test=Test(plot_hist=True, electric=True, wass=True))
+                       data=Data(t_end=40, n_samples=25_000, dt=1e-2),
+                       test=Test(plot_hist=True, electric=True, wass=True, n_samples=25_000))
 
 
 osc_config = Config(problem='bi',
@@ -223,6 +223,11 @@ trap_config = Config(problem='trap',
                      sample=Sample(bs_n=256, bs_t=256),
                      test=Test(plot_particles=True, mean=True))
 
+trap2_config = Config(problem='trap2',
+                      loss=Loss(sigma=1e-2),
+                      data=Data(t_end=1, dim=100, n_samples=5000, dt=4e-3),
+                      sample=Sample(bs_n=256, bs_t=256),
+                      test=Test(plot_particles=True, mean=True))
 
 mdyn_config = Config(problem='mdyn',
                      data=Data(t_end=1, dim=2, n_samples=10_000, dt=2e-3),
@@ -230,10 +235,12 @@ mdyn_config = Config(problem='mdyn',
 
 lz9_config = Config(problem='lz9',
                     data=Data(t_end=20, n_samples=10_000, dt=1e-2),
-                    test=Test(plot_particles=True, wass=True))
+                    loss=Loss(sigma=5e-2),
+                    test=Test(plot_particles=True, wass=True, mean=True))
 
 cs.store(name="lz9", node=lz9_config)
 cs.store(name="mdyn", node=mdyn_config)
 cs.store(name="trap", node=trap_config)
+cs.store(name="trap2", node=trap2_config)
 cs.store(name="osc", node=osc_config)
 cs.store(name="vlasov", node=vlasov_config)

@@ -18,7 +18,7 @@ def get_hist_single(frame, nx):
     return H
 
 
-def get_hist(frame, nx=72):
+def get_hist(frame, nx=100):
     return vmap(get_hist_single, (0, None))(frame, nx)
 
 
