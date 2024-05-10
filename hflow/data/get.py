@@ -32,8 +32,8 @@ def get_data(problem, data_cfg: Data, key):
     sols = []
 
     if problem == 'vbump':
-        train_mus = np.asarray([1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0])
-        test_mus = np.asarray([1.55, 1.85])
+        train_mus = np.asarray([1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0])
+        test_mus = np.asarray([1.35, 1.95])
         mus = np.concatenate([train_mus, test_mus])
         for mu in mus:
             res = run_vlasov(n_samples, t_eval, mu,

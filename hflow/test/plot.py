@@ -11,14 +11,15 @@ from hflow.io.utils import log
 from hflow.misc.plot import imshow_movie, line_movie, scatter_movie
 
 
-def get_hist(frame, nx=72):
+def get_hist_single(frame, nx):
     frame = frame.T
     H, x, y = jnp.histogram2d(
         frame[0], frame[1], bins=nx, range=[[0, 1], [0, 1]])
     return H
 
 
-get_hist = vmap(jit(get_hist))
+def get_hist(frame, nx=72):
+    return vmap(get_hist_single, (0, None))(frame, nx)
 
 
 def plot_test(test_cfg: Test, true_sol, test_sol, t_int, n_plot, mu_i):
