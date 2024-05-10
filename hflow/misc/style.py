@@ -21,7 +21,7 @@ def set_style(latex=True):
     # style
     matplotlib.style.use('seaborn-v0_8-whitegrid')
     matplotlib.rcParams["legend.frameon"] = True
-    matplotlib.rcParams["lines.linewidth"] = 1.2
+    matplotlib.rcParams["lines.linewidth"] = 1.4
     matplotlib.rcParams["axes.linewidth"] = 0.8
     matplotlib.rcParams["axes.edgecolor"] = 'black'
     matplotlib.rcParams["ytick.major.size"] = 2
@@ -45,9 +45,13 @@ def set_style(latex=True):
     # matplotlib.rcParams["axes.labelsize"] = 27
 
 
-def save_show(path, save=True, show=True, format='pgf'):
+def save_show(path=PLOT_PATH, save=True, show=True, format='pgf'):
 
     if save:
         plt.savefig(path, format=format, bbox_inches='tight', pad_inches=0.01)
     if show:
         plt.show()
+
+
+def get_colors():
+    return plt.rcParams['axes.prop_cycle'].by_key()['color']

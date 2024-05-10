@@ -51,3 +51,7 @@ def load_multi(problem, name, out_dir='./results'):
 
     df = pd.DataFrame(rows)
     return cfgs, df
+
+
+def get_min_row(df, col):
+    return df[df[col] == df[col].min()].iloc[0]

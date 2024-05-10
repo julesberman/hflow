@@ -10,11 +10,12 @@ from hflow.misc.misc import epoch_time, unique_id
 
 SWEEP = {
     'problem': 'bi',
-    'optimizer.iters': '10_000,25_000',
+    'optimizer.iters': '30_000',
     'loss.loss_fn': 'ov',
-    'sample.scheme_t': 'rand,trap,equi,gauss',
+    'sample.scheme_t': 'rand,gauss',
     'sample.bs_t': '256',
-    'sample.bs_n': '256,512',
+    'seed': '2,3,4'
+    # 'sample.bs_n': '256,512',
     # 'loss.sigma': '1e-2',
     # 'data.dim': '3',
     # 'sample.bs_n':  '256',
@@ -31,7 +32,7 @@ SWEEP = {
 }
 
 SLURM_CONFIG = {
-    'timeout_min': 60*3,
+    'timeout_min': 60*5,
     'cpus_per_task': 4,
     'mem_gb': 50,
     # 'gpus_per_node': 1,

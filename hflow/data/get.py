@@ -32,28 +32,20 @@ def get_data(problem, data_cfg: Data, key):
     sols = []
 
     if problem == 'vbump':
-        train_mus = np.asarray([1.3, 1.4, 1.5, 1.6, 1.7, 1.8])
-        test_mus = np.asarray([1.35, 1.55, 1.75])
+        train_mus = np.asarray([1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0])
+        test_mus = np.asarray([1.55, 1.85])
         mus = np.concatenate([train_mus, test_mus])
         for mu in mus:
             res = run_vlasov(n_samples, t_eval, mu,
                              mode='bump-on-tail', eta=1e-3)
             sols.append(res)
         sols = np.asarray(sols)
-    elif problem == 'vsingle':
-        train_mus = np.asarray([1.3])
-        test_mus = np.asarray([1.3])
-        mus = np.concatenate([train_mus, test_mus])
-        for mu in mus:
-            res = run_vlasov(n_samples, t_eval, mu, mode='two-stream')
-            sols.append(res)
-        sols = np.asarray(sols)
     elif problem == 'vtwo':
         # train_mus = np.asarray([1.6, 1.65, 1.7, 1.75, 1.8])
         # test_mus = np.asarray([1.675, 1.70001, 1.725])
 
-        train_mus = np.asarray([1.3, 1.4, 1.5, 1.6, 1.7, 1.8])
-        test_mus = np.asarray([1.35, 1.55, 1.75])
+        train_mus = np.asarray([1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9])
+        test_mus = np.asarray([1.25, 1.85])
         mus = np.concatenate([train_mus, test_mus])
         for mu in mus:
             res = run_vlasov(n_samples, t_eval, mu, mode='two-stream')
@@ -61,8 +53,8 @@ def get_data(problem, data_cfg: Data, key):
         sols = np.asarray(sols)
     elif problem == 'lz9':
 
-        train_mus = np.asarray([12.1, 12.2, 12.3, 12.5, 12.6, 12.7])
-        test_mus = np.asarray([12.4])
+        train_mus = np.asarray([12.3, 12.4, 12.6, 12.7, 12.8, 13.0, 13.1])
+        test_mus = np.asarray([12.5, 12.9])
         mus = np.concatenate([train_mus, test_mus])
 
         def solve_for_mu(mu):
