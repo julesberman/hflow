@@ -10,11 +10,11 @@ from hflow.misc.misc import epoch_time, unique_id
 
 SWEEP = {
     'problem': 'bi',
-    'optimizer.iters': '30_000',
     'loss.loss_fn': 'ov',
+    'optimizer.iters': '50_000',
     'sample.scheme_t': 'rand,gauss',
     'sample.bs_t': '256',
-    'seed': '2,3,4'
+    'seed': '1,2,3,4,5,6,7,8'
     # 'sample.bs_n': '256,512',
     # 'loss.sigma': '1e-2',
     # 'data.dim': '3',
@@ -208,6 +208,7 @@ cs = ConfigStore.instance()
 cs.store(name="default", node=Config)
 
 vlasov_config = Config(problem='vtwo',
+                       loss=Loss(sigma=1e-2),
                        data=Data(t_end=40, n_samples=10_000, dt=1e-2),
                        test=Test(plot_hist=True, electric=True, wass=True))
 

@@ -19,6 +19,8 @@ def get_loss_fn(loss_cfg: Loss, data_cfg: Data, s_fn):
     elif loss_cfg.loss_fn == 'ncsm':
         sigmas = generate_sigmas(loss_cfg.L)
         loss_fn = NCSM_Loss(s_fn, sigmas)
+    elif loss_cfg.loss_fn == 'cfm':
+        loss_fn = CFM_Loss(s_fn)
 
     return loss_fn
 
@@ -161,3 +163,46 @@ def generate_sigmas(L, start=1, end=1e-2):
     sigmas = jnp.asarray([start * (end / start) ** (i / (L - 1))
                           for i in range(L)]).reshape(-1, 1)
     return sigmas
+
+
+def CFM_Loss(s_fn):
+
+    def loss_fn(params, x_t_batch, mu, t_batch, quad_weights, key):
+
+        x0 = x_t_batch[0]
+
+        # remove endpoints from OV loss
+        x_t_batch = x_t_batch[1:-1]
+        t_batch = t_batch[1:-1]
+
+        T, N, D = x_t_batch.shape
+        T, MT = t_batch.shape
+        xt_tensor = rearrange(x_t_batch, 'T N D -> T (N D)')
+        xt_tensor = jnp.hstack([xt_tensor, t_batch])  # T (2ND + 1)
+
+        s_Vx = vmap(s_fn, (None, 0, None))
+
+        def flow_match(xt, t, tau, mu, params):
+            mu_t_tau = jnp.concatenate([mu, t, tau])
+            x_tau = tau * xt + (1 - (1 - 0.0)*tau) * x0
+            interior = s_Vx(mu_t_tau, x_tau,  params) - xt + (1 - 0.0)*x0
+            l = 0.5 * \
+                jnp.sum(interior**2, axis=-1)
+            return l.mean()
+
+        def flow_match_time(x_t, tau):
+            x, t = x_t[:-MT], x_t[-MT:]
+            x = rearrange(x, '(N D) -> N D', D=D)
+            loss = flow_match(
+                x, t, tau, mu, params)
+            return loss.mean()
+
+        flow_match_time = vmap(flow_match_time, (0, None))
+        flow_match_time = vmap(flow_match_time, (None, 0))
+
+        bs_tau = 32
+        taus = jax.random.uniform(key, (bs_tau, 1))
+
+        return flow_match_time(xt_tensor, taus).mean()
+
+    return loss_fn

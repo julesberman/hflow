@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 import hflow.io.result as R
 from hflow.config import Config
-from hflow.data.ode import odeint_euler_maruyama
+from hflow.data.ode import odeint_euler, odeint_euler_maruyama
 from hflow.data.sde import solve_sde_ic
 from hflow.io.utils import log
 from hflow.misc.jax import batchmap, get_rand_idx
@@ -48,9 +48,11 @@ def test_model(cfg: Config, data, s_fn, opt_params, key):
             sigmas = generate_sigmas(cfg.loss.L)
             test_sol = solve_test_ald(
                 s_fn, opt_params, ics[mu_i], t_int, sigmas, mus[mu_i], key)
+        elif cfg.loss.loss_fn == 'cfm':
+            test_sol = solve_test_cfm(s_fn, opt_params, ics, t_int, mus[mu_i])
 
         if test_cfg.save_sol:
-            R.RESULT[f'true_sol_{mu_i}'] = true_sol
+            # R.RESULT[f'true_sol_{mu_i}'] = true_sol
             R.RESULT[f'test_sol_{mu_i}'] = test_sol
 
         compute_metrics(test_cfg, true_sol, test_sol, mu_i)
@@ -58,6 +60,33 @@ def test_model(cfg: Config, data, s_fn, opt_params, key):
         plot_test(test_cfg, true_sol, test_sol,
                   t_int, test_cfg.n_plot_samples, mu_i)
 
+    return test_sol
+
+
+def solve_test_cfm(s_fn, params, ics, t_int, mu):
+
+    s_Vx = vmap(s_fn, (None, 0, None))
+    taus = jnp.linspace(0, 1, 64)
+
+    def integrate(mu, T, params):
+
+        def fn(tau, y):
+            mu_t_tau = jnp.concatenate(
+                [mu.reshape(1), T.reshape(1), tau.reshape(1)])
+            return s_Vx(mu_t_tau, y, params)
+
+        sol = odeint_euler(fn, ics, taus)
+        return sol[-1]
+
+    test_sol = []
+    for T in tqdm(t_int, desc='CFM'):
+        s = integrate(mu, T, params)
+        test_sol.append(s)
+
+    test_sol = jnp.asarray(test_sol)
+    test_sol = jnp.squeeze(test_sol)
+
+    print(test_sol.shape)
     return test_sol
 
 
