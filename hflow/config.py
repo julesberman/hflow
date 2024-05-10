@@ -9,12 +9,19 @@ from omegaconf import OmegaConf
 from hflow.misc.misc import epoch_time, unique_id
 
 SWEEP = {
-    'problem': 'lz9',
+    # 'problem': 'vtwo,vbump',
+    # 'loss.loss_fn': 'ov',
+    # 'optimizer.iters': '25_000,50_000,100_000',
+    # 'loss.sigma': '5e-3,1e-2,5e-2',
+
+
+
+    'problem': 'trap2',
     'loss.loss_fn': 'ov',
-    'optimizer.iters': '25_000',
-    'sample.scheme_t': 'rand,gauss',
-    'sample.bs_t': '256',
-    'seed': '1,2,3'
+    'optimizer.iters': '10_000,25_000',
+    'loss.sigma': '0.0,1e-3,5e-3,1e-2',
+    'loss.t_batches': '2',
+
     # 'sample.bs_n': '256,512',
     # 'loss.sigma': '1e-2',
     # 'data.dim': '3',
@@ -32,7 +39,7 @@ SWEEP = {
 }
 
 SLURM_CONFIG = {
-    'timeout_min': 60*5,
+    'timeout_min': 60*4,
     'cpus_per_task': 4,
     'mem_gb': 50,
     # 'gpus_per_node': 1,
