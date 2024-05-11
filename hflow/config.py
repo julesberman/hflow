@@ -9,18 +9,19 @@ from omegaconf import OmegaConf
 from hflow.misc.misc import epoch_time, unique_id
 
 SWEEP = {
-    # 'problem': 'vtwo,vbump',
-    # 'loss.loss_fn': 'ov',
-    # 'optimizer.iters': '25_000,50_000,100_000',
-    # 'loss.sigma': '5e-3,1e-2,5e-2',
+    'problem': 'vtwo',
+    'loss.loss_fn': 'ncsm,cfm',
+    'optimizer.iters': '25_000,50_000,100_000,250_000',
+    'loss.L': '10,32',
+    'sample.scheme_t': 'rand'
 
 
 
-    'problem': 'trap2',
-    'loss.loss_fn': 'ov',
-    'optimizer.iters': '10_000,25_000',
-    'loss.sigma': '0.0,1e-3,5e-3,1e-2',
-    'loss.t_batches': '2',
+    # 'problem': 'trap2',
+
+    # 'optimizer.iters': '10_000,25_000',
+    # 'loss.sigma': '0.0,1e-3,5e-3,1e-2',
+    # 'loss.t_batches': '2',
 
     # 'sample.bs_n': '256,512',
     # 'loss.sigma': '1e-2',
@@ -39,7 +40,7 @@ SWEEP = {
 }
 
 SLURM_CONFIG = {
-    'timeout_min': 60*4,
+    'timeout_min': 60*7,
     'cpus_per_task': 4,
     'mem_gb': 50,
     # 'gpus_per_node': 1,
@@ -90,6 +91,7 @@ class Loss:
     log: bool = False
     trace: str = 'hutch'
     L: int = 10
+    T: int = 100
     t_batches: int = 1
     n_batches: int = 1
 
@@ -245,9 +247,17 @@ lz9_config = Config(problem='lz9',
                     loss=Loss(sigma=5e-2),
                     test=Test(plot_particles=True, wass=True, mean=True))
 
+
+v6_config = Config(problem='v6',
+                   loss=Loss(sigma=5e-2),
+                   data=Data(n_samples=25_000),
+                   test=Test(plot_particles=True, wass=True, n_samples=25_000))
+
+
 cs.store(name="lz9", node=lz9_config)
 cs.store(name="mdyn", node=mdyn_config)
 cs.store(name="trap", node=trap_config)
 cs.store(name="trap2", node=trap2_config)
 cs.store(name="osc", node=osc_config)
 cs.store(name="vlasov", node=vlasov_config)
+cs.store(name="v6", node=v6_config)

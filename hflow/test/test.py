@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 import hflow.io.result as R
 from hflow.config import Config
-from hflow.data.ode import odeint_euler, odeint_euler_maruyama
+from hflow.data.ode import odeint_euler, odeint_euler_maruyama, odeint_rk4
 from hflow.data.sde import solve_sde_ic
 from hflow.io.utils import log
 from hflow.misc.jax import batchmap, get_rand_idx
@@ -51,10 +51,10 @@ def test_model(cfg: Config, data, s_fn, opt_params, key):
         elif cfg.loss.loss_fn == 'ncsm':
             sigmas = generate_sigmas(cfg.loss.L)
             test_sol = solve_test_ald(
-                s_fn, opt_params, ics[mu_i], t_int, sigmas, mus[mu_i], key)
-        elif cfg.loss.loss_fn == 'cfm':
+                s_fn, opt_params, ics[mu_i], t_int, sigmas, mus[mu_i], key, cfg.loss.T)
+        elif cfg.loss.loss_fn == 'cfm' or cfg.loss.loss_fn == 'si':
             test_sol = solve_test_cfm(
-                s_fn, opt_params, ics[mu_i], t_int, mus[mu_i])
+                s_fn, opt_params, ics[mu_i], t_int, mus[mu_i], cfg.loss.T)
         end = time.time()
         R.RESULT[f'test_integrate_time_{mu_i}'] = end-start
 
@@ -70,10 +70,10 @@ def test_model(cfg: Config, data, s_fn, opt_params, key):
     return test_sol
 
 
-def solve_test_cfm(s_fn, params, ics, t_int, mu):
+def solve_test_cfm(s_fn, params, ics, t_int, mu, T):
 
     s_Vx = vmap(s_fn, (None, 0, None))
-    taus = jnp.linspace(0, 1, 64)
+    taus = jnp.linspace(0, 1, T)
 
     def integrate(mu, T, params):
 
@@ -82,7 +82,7 @@ def solve_test_cfm(s_fn, params, ics, t_int, mu):
                 [mu.reshape(1), T.reshape(1), tau.reshape(1)])
             return s_Vx(mu_t_tau, y, params)
 
-        sol = odeint_euler(fn, ics, taus)
+        sol = odeint_rk4(fn, ics, taus)
 
         return sol[-1]
 
@@ -116,12 +116,12 @@ def solve_test_sde(s_fn, params, ics, t_int, dt, sigma, mu, key):
     return test_sol
 
 
-def solve_test_ald(s_fn, params, ics, t_int, sigmas, mu, key):
+def solve_test_ald(s_fn, params, ics, t_int, sigmas, mu, key, T):
 
     D = ics.shape[-1]
     n_samples = ics.shape[0]
 
-    def ald(key, mu, t_infer, sigmas, params, eps=2e-5, T=10):
+    def ald(key, mu, t_infer, sigmas, params, eps=2e-5):
         x = jax.random.normal(key, (D,))
         for sigma in sigmas:
             alpha = eps * sigma**2/sigmas[-1]**2

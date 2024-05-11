@@ -17,7 +17,7 @@ def get_network(cfg: Config, data, key):
         x_dim = D
         mu_t_dim = MT
         out_dim = 1
-    elif cfg.loss.loss_fn == 'ncsm' or cfg.loss.loss_fn == 'cfm':
+    elif cfg.loss.loss_fn == 'ncsm' or cfg.loss.loss_fn == 'cfm' or cfg.loss.loss_fn == 'si':
         x_dim = D
         mu_t_dim = MT+1  # one more for sigma
         out_dim = D
