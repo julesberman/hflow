@@ -21,6 +21,13 @@ from hflow.data.vlasov import run_vlasov
 from hflow.io.utils import log, save_pickle
 from hflow.truth.sburgers import solve_sburgers_samples
 
+def read_from_hdf5(path, n_samples):
+    with h5py.File("/scratch/work/peherstorfer/tmb9910/struphy_data/" + path +".hdf5", "r") as file:
+        t_grid = file["t_grid"][:]
+        sol = file["sol"][:,0:n_samples,:]
+        mu = file["mu"][()]
+        time = file["time"][()]
+    return sol, mu, t_grid, time
 
 def get_data(problem, data_cfg: Data, key):
 
@@ -146,6 +153,21 @@ def get_data(problem, data_cfg: Data, key):
                                gamma=0.0, alpha=0.0, sigma=1e-1, dt=data_cfg.dt)
             sols.append(res)
         sols = np.asarray(sols)
+        
+    elif problem =="v6_landau":
+        mus = []
+        for i in range(6):
+            sol, mu, t_grid, wall_time = read_from_hdf5("strongLandauDamping" + f"{i:02d}", n_samples)
+            R.RESULT[f'FOM_integrate_time_{i}'] = wall_time
+            mus.append(mu)
+            sols.append(sol)
+        sols = np.asarray(sols)
+        mus = np.asarray(mus)
+        idx = np.argsort(mus)
+        mus = mus[idx]
+        sols = sols[idx]
+        train_mus = mus[::2]
+        test_mus = mus[1::2]
 
     R.RESULT['train_mus_raw'] = train_mus
     R.RESULT['test_mus_raw'] = test_mus
