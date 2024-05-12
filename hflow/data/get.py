@@ -70,8 +70,9 @@ def get_data(problem, data_cfg: Data, key):
         sols = np.asarray(sols)
     elif problem == 'lz9':
 
-        train_mus = np.asarray([12.3, 12.4, 12.6, 12.7, 12.8, 13.0, 13.1])
-        test_mus = np.asarray([12.5, 12.9])
+        train_mus = np.asarray(
+            [13.7, 13.8, 13.9, 14.0, 14.1, 14.2, 14.3, 14.4])
+        test_mus = np.asarray([13.85, 14.25])
         mus = np.concatenate([train_mus, test_mus])
 
         def solve_for_mu(mu):

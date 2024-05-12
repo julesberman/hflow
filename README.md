@@ -30,6 +30,7 @@ jaxlib==0.4.23
 
 Run a problem with problem specific default settings (recommended)
 ```
+python hflow/run.py -cn=lz9
 python hflow/run.py -cn=trap
 python hflow/run.py -cn=mdyn
 python hflow/run.py -cn=osc problem=bi

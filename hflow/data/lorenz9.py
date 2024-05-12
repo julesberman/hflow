@@ -6,12 +6,9 @@ from jax.experimental.host_callback import id_print
 
 def get_ic_lorenz9d(key):
     n_particles = 9
-    var = 4e-2
-    noise = jax.random.normal(key, (n_particles, ))*var
-
-    ic = jnp.asarray([0.01, 0, 0.01, 0, 0, 0, 0, 0, 0.01])
-    # ic = jnp.ones((n_particles,))*0.4
-    return ic+noise
+    var = 1e-2
+    ic = jax.random.normal(key, (n_particles, ))*var
+    return ic
 
 
 def get_lorenz9d(mu):
