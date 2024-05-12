@@ -39,7 +39,7 @@ def load_multi(problem, name, out_dir='./results'):
 
     for item in os.listdir(parent_dir):
         item_path = parent_dir / item
-        if os.path.isdir(item_path) and item.isdigit():
+        if os.path.isdir(item_path) and (item.isdigit() or item.split("_")[-1].isdigit()):
             try:
                 row = pd.read_pickle(item_path / 'result.pkl')
 

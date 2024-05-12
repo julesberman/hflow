@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib.backends.backend_pgf import FigureCanvasPgf
 
-PLOT_PATH = Path('../plots/')
+PLOT_PATH = Path('./plots/')
 
 
 def reset_style():
@@ -45,10 +45,11 @@ def set_style(latex=True):
     # matplotlib.rcParams["axes.labelsize"] = 27
 
 
-def save_show(path=PLOT_PATH, save=True, show=True, format='pgf'):
+def save_show(name='', path=PLOT_PATH, save=True, show=True, format='pgf'):
 
     if save:
-        plt.savefig(path, format=format, bbox_inches='tight', pad_inches=0.01)
+        plt.savefig(path/name, format=format,
+                    bbox_inches='tight', pad_inches=0.01)
     if show:
         plt.show()
 

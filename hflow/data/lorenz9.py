@@ -6,7 +6,7 @@ from jax.experimental.host_callback import id_print
 
 def get_ic_lorenz9d(key):
     n_particles = 9
-    var = 1e-2
+    var = 2e-2
     ic = jax.random.normal(key, (n_particles, ))*var
     return ic
 
@@ -40,6 +40,6 @@ def get_lorenz9d(mu):
 
     def diffusion(t, y, *args):
 
-        return jnp.ones_like(y)*1e-2
+        return jnp.ones_like(y)*3e-2
 
     return drift, diffusion

@@ -10,10 +10,10 @@ from hflow.misc.misc import epoch_time, unique_id
 
 SWEEP = {
     'problem': 'lz9',
-    'optimizer.iters': '100_000',
+    'optimizer.iters': '50_000',
     'loss.sigma': '0.0,5e-3,1e-2,5e-2',
     'test.save_sol': 'True',
-    'hnet.width': '15,35'
+    # 'hnet.width': '15'
 
     # 'loss.loss_fn': 'ncsm,cfm',
     # 'optimizer.iters': '50_000',
@@ -39,7 +39,7 @@ SWEEP = {
 }
 
 SLURM_CONFIG = {
-    'timeout_min': 60*10,
+    'timeout_min': 60*4,
     'cpus_per_task': 4,
     'mem_gb': 50,
     # 'gpus_per_node': 1,
@@ -138,7 +138,8 @@ class Config:
     sample: Sample = field(default_factory=Sample)
 
     # misc
-    name: str = field(default_factory=lambda: epoch_time(2))
+    name: str = field(
+        default_factory=lambda: f'{unique_id(4)}_{epoch_time(2)}')
     x64: bool = False  # whether to use 64 bit precision in jax
     platform: Union[str, None] = None  # gpu or cpu, None will let jax default
     # output_dir: str = './results/${hydra.job.name}'  # where to save results, if None nothing is saved
@@ -244,7 +245,7 @@ mdyn_config = Config(problem='mdyn',
 lz9_config = Config(problem='lz9',
                     data=Data(t_end=20, n_samples=25_000, dt=4e-2),
                     loss=Loss(sigma=5e-2),
-                    test=Test(plot_particles=True, wass=True, mean=True, n_samples=25_000))
+                    test=Test(plot_particles=True, wass=True, mean=True, n_samples=25_000, t_samples=64))
 
 
 v6_config = Config(problem='v6',
