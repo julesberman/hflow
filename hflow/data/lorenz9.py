@@ -6,7 +6,7 @@ from jax.experimental.host_callback import id_print
 
 def get_ic_lorenz9d(key):
     n_particles = 9
-    var = 2e-2
+    var = 2e-3
     ic = jax.random.normal(key, (n_particles, ))*var
     return ic
 
