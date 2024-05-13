@@ -58,8 +58,8 @@ def get_data(problem, data_cfg: Data, key):
         # train_mus = np.asarray([1.6, 1.65, 1.7, 1.75, 1.8])
         # test_mus = np.asarray([1.675, 1.70001, 1.725])
 
-        train_mus = np.asarray([1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9])
-        test_mus = np.asarray([1.25, 1.85])
+        train_mus = np.asarray([12.3, 12.4, 12.6, 12.7, 12.8, 13.0, 13.1])
+        test_mus = np.asarray([12.5, 12.9])
         mus = np.concatenate([train_mus, test_mus])
         for mu_i, mu in enumerate(mus):
             start = time.time()
@@ -160,7 +160,7 @@ def get_data(problem, data_cfg: Data, key):
 
     elif problem == "v6":
         mus = []
-        for i in range(1, 4):
+        for i in range(0, 7):
             sol, mu, t_grid, wall_time = read_from_hdf5(
                 "strongLandauDamping" + f"{i:02d}", n_samples)
             R.RESULT[f'FOM_integrate_time_{i}'] = wall_time
@@ -171,8 +171,11 @@ def get_data(problem, data_cfg: Data, key):
         idx = np.argsort(mus)
         mus = mus[idx]
         sols = sols[idx]
-        train_mus = mus[::2]
-        test_mus = mus[1::2]
+        train_idx = np.asarray([0, 1, 3, 5, 6])
+        test_idx = np.asarray([2, 4])
+        train_mus = mus[train_idx]
+        test_mus = mus[test_idx]
+
         t_eval = t_grid
 
         sols = sols[:, :-1]  # bug sol is too big

@@ -40,6 +40,6 @@ def get_lorenz9d(mu):
 
     def diffusion(t, y, *args):
 
-        return jnp.ones_like(y)*3e-2
+        return jnp.ones_like(y)*2e-2
 
     return drift, diffusion
