@@ -11,7 +11,7 @@ def get_ic_lorenz9d(key):
     return ic
 
 
-def get_lorenz9d(mu):
+def get_lorenz9d(mu, noise=2e-2):
 
     def drift(t, y, *args):
         c1, c2, c3, c4, c5, c6, c7, c8, c9 = y
@@ -40,6 +40,6 @@ def get_lorenz9d(mu):
 
     def diffusion(t, y, *args):
 
-        return jnp.ones_like(y)*2e-2
+        return jnp.ones_like(y)*noise
 
     return drift, diffusion

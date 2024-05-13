@@ -36,7 +36,7 @@ python hflow/run.py -cn=mdyn
 python hflow/run.py -cn=osc problem=bi
 python hflow/run.py -cn=vlasov problem=vtwo
 python hflow/run.py -cn=vlasov problem=vbump
-python hflow/run.py -cn=vlasov problem=v6
+python hflow/run.py -cn=v6
 ```
 
 Run a problem with problem specific default settings and overrides

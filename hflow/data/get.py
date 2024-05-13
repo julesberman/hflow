@@ -72,7 +72,22 @@ def get_data(problem, data_cfg: Data, key):
         mus = np.concatenate([train_mus, test_mus])
 
         def solve_for_mu(mu):
-            drift, diffusion = get_lorenz9d(mu)
+            drift, diffusion = get_lorenz9d(mu, noise=2e-2)
+            return solve_sde(drift, diffusion, t_eval, get_ic_lorenz9d, n_samples, dt=data_cfg.dt, key=key)
+        for mu in mus:
+            res = solve_for_mu(mu)
+            sols.append(res)
+        sols = np.asarray(sols)
+        sols = rearrange(sols, 'M N T D -> M T N D')
+    elif problem == 'lz92':
+
+        train_mus = np.asarray(
+            [13.7, 13.8, 13.9, 14.0, 14.1, 14.2, 14.3, 14.4])
+        test_mus = np.asarray([13.85, 14.25])
+        mus = np.concatenate([train_mus, test_mus])
+
+        def solve_for_mu(mu):
+            drift, diffusion = get_lorenz9d(mu, noise=3e-2)
             return solve_sde(drift, diffusion, t_eval, get_ic_lorenz9d, n_samples, dt=data_cfg.dt, key=key)
         for mu in mus:
             res = solve_for_mu(mu)
@@ -176,7 +191,7 @@ def get_data(problem, data_cfg: Data, key):
         sols = sols[:, :-1]  # bug sol is too big
         T = sols.shape[1]//2
         sols = sols[:, :T]
-        t_eval = t_eval[:, :T]
+        t_eval = t_eval[:T]
         # lets do half
 
     R.RESULT['train_mus_raw'] = train_mus

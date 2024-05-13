@@ -59,7 +59,7 @@ def test_model(cfg: Config, data, s_fn, opt_params, key):
         R.RESULT[f'test_integrate_time_{mu_i}'] = end-start
 
         if test_cfg.save_sol:
-            # R.RESULT[f'true_sol_{mu_i}'] = true_sol
+            R.RESULT[f'true_sol_{mu_i}'] = true_sol
             R.RESULT[f'test_sol_{mu_i}'] = test_sol
 
         compute_metrics(test_cfg, true_sol, test_sol, mu_i)

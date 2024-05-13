@@ -9,10 +9,10 @@ from omegaconf import OmegaConf
 from hflow.misc.misc import epoch_time, unique_id
 
 SWEEP = {
-    'problem': 'lz9',
-    'optimizer.iters': '50_000',
-    'loss.sigma': '0.0,5e-3,1e-2,5e-2',
-    'test.save_sol': 'True',
+    'problem': 'v6',
+    'optimizer.iters': '250_000',
+    'loss.sigma': '0.0,5e-3,1e-2,5e-2,1e-1',
+    # 'test.save_sol': 'True',
     # 'hnet.width': '15'
 
     # 'loss.loss_fn': 'ncsm,cfm',
@@ -39,7 +39,7 @@ SWEEP = {
 }
 
 SLURM_CONFIG = {
-    'timeout_min': 60*4,
+    'timeout_min': 60*10,
     'cpus_per_task': 4,
     'mem_gb': 50,
     # 'gpus_per_node': 1,
@@ -245,7 +245,7 @@ mdyn_config = Config(problem='mdyn',
 lz9_config = Config(problem='lz9',
                     data=Data(t_end=20, n_samples=25_000, dt=4e-2),
                     loss=Loss(sigma=5e-2),
-                    test=Test(plot_particles=True, wass=True, mean=True, n_samples=10_000, t_samples=32))
+                    test=Test(plot_particles=True, wass=True, mean=True, n_samples=15_000, t_samples=32))
 
 
 v6_config = Config(problem='v6',
