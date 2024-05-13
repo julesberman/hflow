@@ -67,8 +67,20 @@ def compute_metrics(test_cfg: Test, true_sol, test_sol, mu_i):
         log.info(f'l2_cov_err {mu_i}: {l2_err_cov:.3e}')
 
     if test_cfg.electric:
-        true_electric = compute_electric_energy(true_sol)
-        test_electric = compute_electric_energy(test_sol)
+
+        true_sol_ele = true_sol
+        test_sol_ele = test_sol
+        boxsize = 50
+
+        if true_sol.shape[-1] > 2:
+            true_sol_ele = np.stack(
+                [true_sol[:, :, 0], true_sol[:, :, 3]], axis=-1)
+            test_sol_ele = np.stack(
+                [test_sol[:, :, 0], test_sol[:, :, 3]], axis=-1)
+            boxsize = 4*np.pi
+
+        true_electric = compute_electric_energy(true_sol_ele, boxsize=boxsize)
+        test_electric = compute_electric_energy(test_sol_ele, boxsize=boxsize)
         R.RESULT[f'true_electric_{mu_i}'] = true_electric
         R.RESULT[f'test_electric_{mu_i}'] = test_electric
 
@@ -125,7 +137,7 @@ def compute_wasserstein_over_D(A, B, eps):
     return np.asarray(wass)
 
 
-def compute_electric_energy(sol):
+def compute_electric_energy(sol, boxsize=50):
     from hflow.data.vlasov import (get_gradient_matrix, get_laplacian_matrix,
                                    getAcc)
 
@@ -134,7 +146,6 @@ def compute_electric_energy(sol):
 
     sol = sol[:, :N*8]
 
-    boxsize = 50  # not 50 because everything should be normalized
     sol = np.mod(sol, boxsize)
     # sol[sol == 0.0] = 1e-5
     # sol[sol == 1.0] = (1-1e-5)

@@ -55,11 +55,8 @@ def get_data(problem, data_cfg: Data, key):
             sols.append(res)
         sols = np.asarray(sols)
     elif problem == 'vtwo':
-        # train_mus = np.asarray([1.6, 1.65, 1.7, 1.75, 1.8])
-        # test_mus = np.asarray([1.675, 1.70001, 1.725])
-
-        train_mus = np.asarray([12.3, 12.4, 12.6, 12.7, 12.8, 13.0, 13.1])
-        test_mus = np.asarray([12.5, 12.9])
+        train_mus = np.asarray([1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9])
+        test_mus = np.asarray([1.25, 1.85])
         mus = np.concatenate([train_mus, test_mus])
         for mu_i, mu in enumerate(mus):
             start = time.time()
@@ -70,9 +67,8 @@ def get_data(problem, data_cfg: Data, key):
         sols = np.asarray(sols)
     elif problem == 'lz9':
 
-        train_mus = np.asarray(
-            [13.7, 13.8, 13.9, 14.0, 14.1, 14.2, 14.3, 14.4])
-        test_mus = np.asarray([13.85, 14.25])
+        train_mus = np.asarray([12.3, 12.4, 12.6, 12.7, 12.8, 13.0, 13.1])
+        test_mus = np.asarray([12.5, 12.9])
         mus = np.concatenate([train_mus, test_mus])
 
         def solve_for_mu(mu):
@@ -177,8 +173,11 @@ def get_data(problem, data_cfg: Data, key):
         test_mus = mus[test_idx]
 
         t_eval = t_grid
-
         sols = sols[:, :-1]  # bug sol is too big
+        T = sols.shape[1]//2
+        sols = sols[:, :T]
+        t_eval = t_eval[:, :T]
+        # lets do half
 
     R.RESULT['train_mus_raw'] = train_mus
     R.RESULT['test_mus_raw'] = test_mus

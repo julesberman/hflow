@@ -251,7 +251,7 @@ lz9_config = Config(problem='lz9',
 v6_config = Config(problem='v6',
                    loss=Loss(sigma=5e-2),
                    data=Data(n_samples=25_000),
-                   test=Test(plot_particles=True, wass=True, n_samples=25_000))
+                   test=Test(plot_particles=True, wass=True, n_samples=25_000, electric=True))
 
 
 cs.store(name="lz9", node=lz9_config)
