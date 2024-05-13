@@ -42,11 +42,6 @@ def compute_metrics(test_cfg: Test, true_sol, test_sol, mu_i):
         R.RESULT[f'full_mean_test_{mu_i}'] = test_m
         R.RESULT[f'full_cov_test_{mu_i}'] = test_cov
 
-        R.RESULT[f'time_mean_true_{mu_i}'] = true_m[:, 0]
-        R.RESULT[f'time_cov_true_{mu_i}'] = true_cov[:, 0]
-        R.RESULT[f'time_mean_test_{mu_i}'] = test_m[:, 0]
-        R.RESULT[f'time_cov_test_{mu_i}'] = test_cov[:, 0]
-
         time_err_m = np.linalg.norm(
             true_m - test_m, axis=(-1)) / np.linalg.norm(true_m, axis=(-1))
         time_err_cov = np.linalg.norm(
@@ -59,10 +54,17 @@ def compute_metrics(test_cfg: Test, true_sol, test_sol, mu_i):
         cov_err = np.mean(time_err_cov)
 
         R.RESULT[f'mean_mean_err_{mu_i}'] = mean_err
-        log.info(f'mean_mean_err {mu_i}: {mean_err:.3e}')
-
         R.RESULT[f'mean_cov_err_{mu_i}'] = cov_err
-        log.info(f'mean_cov_err {mu_i}: {cov_err:.3e}')
+
+        l2_mean_err = np.linalg.norm(true_m - test_m) / np.linalg.norm(true_m)
+        l2_err_cov = np.linalg.norm(
+            true_cov - test_cov) / np.linalg.norm(true_cov)
+
+        R.RESULT[f'l2_mean_err_{mu_i}'] = l2_mean_err
+        R.RESULT[f'l2_cov_err_{mu_i}'] = l2_err_cov
+
+        log.info(f'l2_mean_err {mu_i}: {l2_mean_err:.3e}')
+        log.info(f'l2_cov_err {mu_i}: {l2_err_cov:.3e}')
 
     if test_cfg.electric:
         true_electric = compute_electric_energy(true_sol)
