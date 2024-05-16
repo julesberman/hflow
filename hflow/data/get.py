@@ -65,21 +65,19 @@ def get_data(problem, data_cfg: Data, key):
             R.RESULT[f'FOM_integrate_time_{mu_i}'] = end-start
             sols.append(res)
         sols = np.asarray(sols)
-    elif problem == 'lz9':
-        train_mus = np.asarray(
-            [13.7, 13.8, 13.9, 14.0, 14.1, 14.2, 14.3, 14.4])
-        test_mus = np.asarray([13.85, 14.25])
-        mus = np.concatenate([train_mus, test_mus])
 
-        def solve_for_mu(mu):
-            drift, diffusion = get_lorenz9d(mu, noise=5e-2)
-            return solve_sde(drift, diffusion, t_eval, get_ic_lorenz9d, n_samples, dt=data_cfg.dt, key=key)
-        for mu in mus:
-            res = solve_for_mu(mu)
+    elif problem == 'vtwo2':
+        train_mus = np.asarray([0.85, 1.0, 1.3, 1.45, 1.6, 1.75, 2.05, 2.2])
+        test_mus = np.asarray([1.15, 1.9])
+        mus = np.concatenate([train_mus, test_mus])
+        for mu_i, mu in enumerate(mus):
+            start = time.time()
+            res = run_vlasov(n_samples, t_eval, mu, mode='two-stream')
+            end = time.time()
+            R.RESULT[f'FOM_integrate_time_{mu_i}'] = end-start
             sols.append(res)
         sols = np.asarray(sols)
-        sols = rearrange(sols, 'M N T D -> M T N D')
-    elif problem == 'lz92':
+    elif problem == 'lz9':
 
         train_mus = np.asarray(
             [13.5, 13.6, 13.7, 13.8, 13.9, 14.0, 14.1, 14.2])
@@ -88,54 +86,6 @@ def get_data(problem, data_cfg: Data, key):
 
         def solve_for_mu(mu):
             drift, diffusion = get_lorenz9d(mu, noise=5e-2)
-            return solve_sde(drift, diffusion, t_eval, get_ic_lorenz9d, n_samples, dt=data_cfg.dt, key=key)
-        for mu in mus:
-            res = solve_for_mu(mu)
-            sols.append(res)
-        sols = np.asarray(sols)
-        sols = rearrange(sols, 'M N T D -> M T N D')
-
-    elif problem == 'lz93':
-
-        train_mus = np.asarray(
-            [13.6, 13.65, 13.7, 13.8, 13.85, 13.95, 14.0])
-        test_mus = np.asarray([13.75, 13.9])
-        mus = np.concatenate([train_mus, test_mus])
-
-        def solve_for_mu(mu):
-            drift, diffusion = get_lorenz9d(mu, noise=1e-2)
-            return solve_sde(drift, diffusion, t_eval, get_ic_lorenz9d, n_samples, dt=data_cfg.dt, key=key)
-        for mu in mus:
-            res = solve_for_mu(mu)
-            sols.append(res)
-        sols = np.asarray(sols)
-        sols = rearrange(sols, 'M N T D -> M T N D')
-
-    elif problem == 'lz94':
-
-        train_mus = np.asarray(
-            [13.5, 13.6,  13.8,  14.0, 14.1])
-        test_mus = np.asarray([13.7, 13.9])
-        mus = np.concatenate([train_mus, test_mus])
-
-        def solve_for_mu(mu):
-            drift, diffusion = get_lorenz9d(mu, noise=5e-2)
-            return solve_sde(drift, diffusion, t_eval, get_ic_lorenz9d, n_samples, dt=data_cfg.dt, key=key)
-        for mu in mus:
-            res = solve_for_mu(mu)
-            sols.append(res)
-        sols = np.asarray(sols)
-        sols = rearrange(sols, 'M N T D -> M T N D')
-
-    elif problem == 'lz95':
-
-        train_mus = np.asarray(
-            [12.5, 12.6,  12.8,  13.0, 13.1])
-        test_mus = np.asarray([12.7, 12.9])
-        mus = np.concatenate([train_mus, test_mus])
-
-        def solve_for_mu(mu):
-            drift, diffusion = get_lorenz9d(mu, noise=2e-2)
             return solve_sde(drift, diffusion, t_eval, get_ic_lorenz9d, n_samples, dt=data_cfg.dt, key=key)
         for mu in mus:
             res = solve_for_mu(mu)
@@ -237,9 +187,12 @@ def get_data(problem, data_cfg: Data, key):
 
         t_eval = t_grid
         sols = sols[:, :-1]  # bug sol is too big
-        T = sols.shape[1]//2
+        T = sols.shape[1]//data_cfg.t_end
+        T = int(T)
+        print(T)
         sols = sols[:, :T]
         t_eval = t_eval[:T]
+        print(T, t_eval)
         # lets do half
 
     R.RESULT['train_mus_raw'] = train_mus

@@ -9,20 +9,18 @@ from omegaconf import OmegaConf
 from hflow.misc.misc import epoch_time, unique_id
 
 SWEEP = {
-    'problem': 'trap',
-    'optimizer.iters': '25_000,50_000',
-    'loss.sigma': '0.0,5e-3,1e-2,5e-2,1e-1',
-    'loss.t_batches': '4',
-
-    # 'test.save_sol': 'True',
+    'problem': 'v6',
+    'optimizer.iters': '50_000',
+    'loss.sigma': '5e-3,1e-2,2e-2,5e-2',
+    'test.save_sol': 'True',
+    'data.t_end': '6,5,4,3'
     # 'hnet.width': '15'
 
     # 'loss.loss_fn': 'ncsm,cfm',
     # 'optimizer.iters': '50_000',
     # 'loss.L': '10,32',
+    # 'loss.T': '10,25,100',
     # 'sample.scheme_t': 'rand'
-
-
 
     # 'sample.bs_n': '256,512',
     # 'loss.sigma': '1e-2',
@@ -41,7 +39,7 @@ SWEEP = {
 }
 
 SLURM_CONFIG = {
-    'timeout_min': 60*10,
+    'timeout_min': 60*5,
     'cpus_per_task': 4,
     'mem_gb': 50,
     # 'gpus_per_node': 1,
@@ -252,8 +250,8 @@ lz9_config = Config(problem='lz9',
 
 v6_config = Config(problem='v6',
                    loss=Loss(sigma=5e-2),
-                   data=Data(n_samples=25_000),
-                   test=Test(plot_particles=True, wass=True, n_samples=25_000, electric=True))
+                   data=Data(n_samples=25_000, t_end=6),
+                   test=Test(plot_hist=True, wass=True, n_samples=25_000, electric=True))
 
 
 cs.store(name="lz9", node=lz9_config)

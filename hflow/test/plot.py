@@ -36,6 +36,10 @@ def plot_test(test_cfg: Test, true_sol, test_sol, t_int, n_plot, mu_i):
     # plot scatter
     if test_cfg.plot_particles:
         try:
+            if true_sol.shape[-1] > 2:
+                dim_idx = np.asarray([0, 3])
+                true_sol = true_sol[:, :, dim_idx]
+                test_sol = test_sol[:, :, dim_idx]
             plot_sol = jnp.hstack(
                 [true_sol[:, idx_sample], test_sol[:, idx_sample]])
             cs = [*['r']*n_plot, *['b']*n_plot]
@@ -47,6 +51,10 @@ def plot_test(test_cfg: Test, true_sol, test_sol, t_int, n_plot, mu_i):
     # plot hist
     if test_cfg.plot_hist:
         try:
+            if true_sol.shape[-1] > 2:
+                dim_idx = np.asarray([0, 3])
+                true_sol = true_sol[:, :, dim_idx]
+                test_sol = test_sol[:, :, dim_idx]
             idx_time = np.linspace(0, len(test_sol)-1, frames, dtype=np.int32)
             hist_sol = get_hist(test_sol[idx_time])
             imshow_movie(hist_sol, t=t_int[idx_time], show=False,

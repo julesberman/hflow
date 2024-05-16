@@ -70,4 +70,5 @@ python hflow/run.py --multirun -cn=vlasov problem=vtwo
 python hflow/run.py --multirun -cn=vlasov problem=vbump
 python hflow/run.py --multirun -cn=trap
 python hflow/run.py --multirun -cn=lz9 name=study_sigma
+python hflow/run.py --multirun -cn=v6
 ```
