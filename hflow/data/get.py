@@ -65,6 +65,17 @@ def get_data(problem, data_cfg: Data, key):
             R.RESULT[f'FOM_integrate_time_{mu_i}'] = end-start
             sols.append(res)
         sols = np.asarray(sols)
+    elif problem == 'vtwo2':
+        train_mus = np.asarray([0.85, 1.0, 1.3, 1.45, 1.6, 1.75, 2.05, 2.2])
+        test_mus = np.asarray([1.15, 1.9])
+        mus = np.concatenate([train_mus, test_mus])
+        for mu_i, mu in enumerate(mus):
+            start = time.time()
+            res = run_vlasov(n_samples, t_eval, mu, mode='two-stream')
+            end = time.time()
+            R.RESULT[f'FOM_integrate_time_{mu_i}'] = end-start
+            sols.append(res)
+        sols = np.asarray(sols)
     elif problem == 'lz9':
 
         train_mus = np.asarray(
