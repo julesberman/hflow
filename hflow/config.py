@@ -9,9 +9,11 @@ from omegaconf import OmegaConf
 from hflow.misc.misc import epoch_time, unique_id
 
 SWEEP = {
-    'problem': 'v6',
-    'optimizer.iters': '250_000',
+    'problem': 'trap',
+    'optimizer.iters': '25_000,50_000',
     'loss.sigma': '0.0,5e-3,1e-2,5e-2,1e-1',
+    'loss.t_batches': '4',
+
     # 'test.save_sol': 'True',
     # 'hnet.width': '15'
 

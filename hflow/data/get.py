@@ -67,12 +67,12 @@ def get_data(problem, data_cfg: Data, key):
         sols = np.asarray(sols)
     elif problem == 'lz9':
         train_mus = np.asarray(
-            [14.2, 14.25, 14.35, 14.4, 14.45, 14.5, 14.55, 14.6])
-        test_mus = np.asarray([14.3, 14.5,])
+            [13.7, 13.8, 13.9, 14.0, 14.1, 14.2, 14.3, 14.4])
+        test_mus = np.asarray([13.85, 14.25])
         mus = np.concatenate([train_mus, test_mus])
 
         def solve_for_mu(mu):
-            drift, diffusion = get_lorenz9d(mu, noise=3e-2)
+            drift, diffusion = get_lorenz9d(mu, noise=5e-2)
             return solve_sde(drift, diffusion, t_eval, get_ic_lorenz9d, n_samples, dt=data_cfg.dt, key=key)
         for mu in mus:
             res = solve_for_mu(mu)
@@ -82,8 +82,8 @@ def get_data(problem, data_cfg: Data, key):
     elif problem == 'lz92':
 
         train_mus = np.asarray(
-            [13.7, 13.8, 13.9, 14.0, 14.1, 14.2, 14.3, 14.4])
-        test_mus = np.asarray([13.85, 14.25])
+            [13.5, 13.6, 13.7, 13.8, 13.9, 14.0, 14.1, 14.2])
+        test_mus = np.asarray([13.65, 14.05])
         mus = np.concatenate([train_mus, test_mus])
 
         def solve_for_mu(mu):
@@ -103,7 +103,39 @@ def get_data(problem, data_cfg: Data, key):
         mus = np.concatenate([train_mus, test_mus])
 
         def solve_for_mu(mu):
-            drift, diffusion = get_lorenz9d(mu, noise=4e-2)
+            drift, diffusion = get_lorenz9d(mu, noise=1e-2)
+            return solve_sde(drift, diffusion, t_eval, get_ic_lorenz9d, n_samples, dt=data_cfg.dt, key=key)
+        for mu in mus:
+            res = solve_for_mu(mu)
+            sols.append(res)
+        sols = np.asarray(sols)
+        sols = rearrange(sols, 'M N T D -> M T N D')
+
+    elif problem == 'lz94':
+
+        train_mus = np.asarray(
+            [13.5, 13.6,  13.8,  14.0, 14.1])
+        test_mus = np.asarray([13.7, 13.9])
+        mus = np.concatenate([train_mus, test_mus])
+
+        def solve_for_mu(mu):
+            drift, diffusion = get_lorenz9d(mu, noise=5e-2)
+            return solve_sde(drift, diffusion, t_eval, get_ic_lorenz9d, n_samples, dt=data_cfg.dt, key=key)
+        for mu in mus:
+            res = solve_for_mu(mu)
+            sols.append(res)
+        sols = np.asarray(sols)
+        sols = rearrange(sols, 'M N T D -> M T N D')
+
+    elif problem == 'lz95':
+
+        train_mus = np.asarray(
+            [12.5, 12.6,  12.8,  13.0, 13.1])
+        test_mus = np.asarray([12.7, 12.9])
+        mus = np.concatenate([train_mus, test_mus])
+
+        def solve_for_mu(mu):
+            drift, diffusion = get_lorenz9d(mu, noise=2e-2)
             return solve_sde(drift, diffusion, t_eval, get_ic_lorenz9d, n_samples, dt=data_cfg.dt, key=key)
         for mu in mus:
             res = solve_for_mu(mu)

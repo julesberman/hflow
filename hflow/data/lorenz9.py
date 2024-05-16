@@ -4,9 +4,9 @@ from jax import jit, vmap
 from jax.experimental.host_callback import id_print
 
 
-def get_ic_lorenz9d(key):
+def get_ic_lorenz9d(key, noise=2e-2):
     n_particles = 9
-    var = 2e-3
+    var = noise
     ic = jax.random.normal(key, (n_particles, ))*var
     return ic
 
