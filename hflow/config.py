@@ -9,37 +9,21 @@ from omegaconf import OmegaConf
 from hflow.misc.misc import epoch_time, unique_id
 
 SWEEP = {
-    'problem': 'v6',
-    'optimizer.iters': '50_000',
-    'loss.sigma': '5e-3,1e-2,2e-2,5e-2',
-    'test.save_sol': 'True',
-    'data.t_end': '6,5,4,3'
-    # 'hnet.width': '15'
+    'problem': 'bi',
+    'optimizer.iters': '25_000',  # ,50_000',
+    'loss.sigma': '0.0',
+    'test.save_sol': 'False',
 
-    # 'loss.loss_fn': 'ncsm,cfm',
-    # 'optimizer.iters': '50_000',
-    # 'loss.L': '10,32',
-    # 'loss.T': '10,25,100',
-    # 'sample.scheme_t': 'rand'
+    'sample.scheme_t': 'equi',
 
-    # 'sample.bs_n': '256,512',
-    # 'loss.sigma': '1e-2',
-    # 'data.dim': '3',
-    # 'sample.bs_n':  '256',
-    # 'loss.noise': '0.0,1e-1',
-    # 'loss.sigma': '0.0,5e-4,1e-3,5e-3,1e-2,5e-2,1e-1',
-    # 'hnet.width': '15,32',
-    # 'unet.width': '64,120',
-    # 'loss.n_batches': '8',
-    # 'loss.t_batches': '8',
-    # 'sample.bs_n':  '128',
-    # 'sample.bs_t':  '256',
-    # 'unet.last_activation': 'none,tanh'
+    'sample.bs_n':  '128',
+    'sample.bs_t':  '256',
+
 
 }
 
 SLURM_CONFIG = {
-    'timeout_min': 60*5,
+    'timeout_min': 60*3,
     'cpus_per_task': 4,
     'mem_gb': 50,
     # 'gpus_per_node': 1,

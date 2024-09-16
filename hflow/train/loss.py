@@ -1,31 +1,105 @@
 
+from functools import partial
+
 import jax
 import jax.numpy as jnp
 from einops import rearrange
 from jax import grad, jacfwd, jacrev, jit, jvp, vmap
 from jax.experimental.host_callback import id_print
 
-from hflow.config import Data, Loss
+from hflow.config import Loss, Sample
 from hflow.misc.jax import batchmap, hess_trace_estimator, tracewrap
+from hflow.train.loss_fd import FD_Loss
 
 
-def get_loss_fn(loss_cfg: Loss, data_cfg: Data, s_fn):
+def get_loss_fn(loss_cfg: Loss, sample_cfg: Sample, s_fn):
 
     if loss_cfg.loss_fn == 'ov':
         loss_fn = OV_Loss(
             s_fn, noise=loss_cfg.noise, sigma=loss_cfg.sigma, trace=loss_cfg.trace, t_batches=loss_cfg.t_batches, n_batches=loss_cfg.n_batches)
+    elif loss_cfg.loss_fn == 'fd':
+        loss_fn = FD_Loss(s_fn, sample_cfg.bs_t, sample_cfg.bs_n)
     elif loss_cfg.loss_fn == 'ncsm':
         sigmas = generate_sigmas(loss_cfg.L)
-        loss_fn = NCSM_Loss(s_fn, sigmas)
+        loss_fn = NCSM_Loss(s_fn, sigmas, t_batches=loss_cfg.t_batches)
     elif loss_cfg.loss_fn == 'cfm':
-        loss_fn = CFM_Loss(s_fn)
+        loss_fn = CFM_Loss(s_fn, t_batches=loss_cfg.t_batches)
     elif loss_cfg.loss_fn == 'si':
         loss_fn = SI_Loss(s_fn, loss_cfg.sigma)
 
     return loss_fn
 
 
-def OV_Loss(s, noise=0.0, sigma=0.0, return_interior=False, trace='true', t_batches=1, n_batches=1):
+# def FD_Loss(s):
+
+#     def s_sep(mu, x, t, params):
+#         mu_t = jnp.concatenate([mu, t])
+#         return s(mu_t, x, params)
+
+#     s_Vx = vmap(s_sep, in_axes=(None, 0, None, None))
+
+#     def loss_fn(params, x_t_batch, mu, t_batch, quad_weights, key):
+
+#         x_batch = x_t_batch[1:-1]  # T, N, D
+#         t_batch = t_batch[1:-1]  # T
+
+#         times = t_batch
+#         integration_weights = 0.5 * jnp.concatenate([jnp.array([times[1] - times[0]]),
+#                                                     (times[2:] - times[:-2]),
+#                                                     jnp.array([times[-1] - times[-2]])])
+
+#         def expected_value(F, x, t, mu):
+#             f_x = F(mu, x, t, params)
+#             print(f_x.shape)
+#             return jnp.mean(f_x)
+
+#         E_s_v = vmap(partial(expected_value, s_Vx), (0, 0, None))
+
+#         t_1 = times[:-1]  # T -1
+#         t_p1 = times[1:]  # T-1
+#         x_1 = x_batch[:-1]  # T-1, N, D
+#         x_p1 = x_batch[1:]  # T-1, N, D
+
+#         loss = 0
+
+#         sum_En_snplus1 = jnp.sum(E_s_v(x_1, t_p1, mu))
+#         sum_Enplus1_sn = jnp.sum(E_s_v(x_p1, t_1, mu))
+#         sum_En_sn = jnp.sum(E_s_v(x_1, t_1, mu))
+#         sum_Enplus1_snplus1 = jnp.sum(E_s_v(x_p1, t_p1, mu))
+#         loss += (+ 0.5 * sum_En_snplus1
+#                  - 0.5 * sum_Enplus1_sn
+#                  + 0.5 * sum_En_sn
+#                  - 0.5 * sum_Enplus1_snplus1)
+
+#         def nabla_s(params, x, t, mu):
+#             return jax.grad(lambda x: s_sep(mu, x, t, params))(x)
+
+#         def nabla_s_squared(params, x, t, mu):
+#             return jnp.sum(nabla_s(params, x, t, mu)**2)
+
+#         def _grad_s_sq(mu, x, t, params): return nabla_s_squared(
+#             params, x, t, mu)
+
+#         _grad_s_sq_V = vmap(_grad_s_sq, in_axes=(None, 0, None, None))
+#         def E_grad_s_sq(x, t): return expected_value(
+#             _grad_s_sq_V, x, t, mu)
+
+#         grad_s_sq = jax.vmap(E_grad_s_sq, (0, 0))(x_batch, times)
+
+#         id_print(loss)
+
+#         sum_En_gradsn = 0.5 * \
+#             jnp.sum(integration_weights * grad_s_sq)
+#         id_print(sum_En_gradsn)
+
+#         loss += sum_En_gradsn
+
+#         return loss
+
+#     return loss_fn
+
+
+def OV_Loss(s, noise=0.0, sigma=0.0, return_interior=False, trace='true', t_batches=1, n_batches=1, fd_time=False):
 
     def s_sep(mu, t, x, params):
         mu_t = jnp.concatenate([mu, t])
@@ -116,7 +190,7 @@ def OV_Loss(s, noise=0.0, sigma=0.0, return_interior=False, trace='true', t_batc
     return loss_fn
 
 
-def NCSM_Loss(s, sigmas):
+def NCSM_Loss(s, sigmas, t_batches=1):
 
     def score_match(x, t, sigma, mu, key, params):
         mu_t_sigma = jnp.concatenate([mu, t, sigma])
@@ -151,6 +225,9 @@ def NCSM_Loss(s, sigmas):
             return loss.mean()
 
         score_match_time_sigma = vmap(score_match_time_sigma, (0, None))
+        if t_batches > 1:
+            score_match_time_sigma = batchmap(
+                score_match_time_sigma, t_batches)
         score_match_time_sigma = vmap(score_match_time_sigma, (None, 0))
 
         return score_match_time_sigma(xt_tensor, sigmas).mean()
@@ -165,7 +242,7 @@ def generate_sigmas(L, start=1, end=1e-2):
     return sigmas
 
 
-def CFM_Loss(s_fn):
+def CFM_Loss(s_fn, t_batches=1):
 
     def loss_fn(params, x_t_batch, mu, t_batch, quad_weights, key):
 
@@ -198,6 +275,8 @@ def CFM_Loss(s_fn):
             return loss.mean()
 
         flow_match_time = vmap(flow_match_time, (0, None))
+        if t_batches > 1:
+            flow_match_time = batchmap(flow_match_time, t_batches)
         flow_match_time = vmap(flow_match_time, (None, 0))
 
         bs_tau = 32

@@ -24,8 +24,23 @@ def get_arg_fn(sample_cfg: Sample, data):
     quad_weights = None
     M, T, N, D = sols.shape
 
-    t_data = t_data / t_data[-1]
+    if sample_cfg.scheme_t == 'fixed':
+        sols = rearrange(sols, 'M T N D -> N T M D')
 
+        def args_fn(key, percent):
+
+            nonlocal sols
+            nonlocal t_data
+            nonlocal mu_data
+            N, T, M, D = sols.shape
+            sols = jnp.asarray(sols)
+            keyn, keym, keyl = jax.random.split(key, num=3)
+
+            m_idx = jax.random.randint(keym, minval=0, maxval=M, shape=())
+
+            return sols, m_idx, t_data, mu_data
+        return args_fn
+    t_data = t_data / t_data[-1]
     if sample_cfg.scheme_t == 'gauss':
         g_pts_01, quad_weights = gauss_quadrature_weights_points(
             bs_t, a=0.0, b=1.0)

@@ -94,7 +94,7 @@ def get_data(problem, data_cfg: Data, key):
 
     elif problem == 'bi':
 
-        train_mus = np.asarray([0.10, 0.15, 0.25, 0.3])
+        train_mus = np.asarray([0.2])
         test_mus = np.asarray([0.2])
         mus = np.concatenate([train_mus, test_mus])
 
@@ -192,8 +192,34 @@ def get_data(problem, data_cfg: Data, key):
         sols = sols[:, :T]
         t_eval = t_eval[:T]
         print(T, t_eval)
-        # lets do half
 
+    elif problem == "v62":
+        mus = []
+        for i in range(0, 11):
+            sol, mu, t_grid, wall_time = read_from_hdf5(
+                "strongLandauDampingCV" + f"{i:02d}", n_samples)
+            R.RESULT[f'FOM_integrate_time_{i}'] = wall_time
+            mus.append(mu)
+            sols.append(sol)
+        sols = np.asarray(sols)
+        mus = np.asarray(mus)
+        idx = np.argsort(mus)
+        mus = mus[idx]
+        sols = sols[idx]
+        train_idx = np.asarray([0, 1, 2, 3, 4, 6, 7, 9, 10])
+        test_idx = np.asarray([5])
+        train_mus = mus[train_idx]
+        test_mus = mus[test_idx]
+
+        t_eval = t_grid
+        sols = sols[:, :-1]  # bug sol is too big
+        T = sols.shape[1]//data_cfg.t_end
+        T = int(T)
+        # print(T)
+        sols = sols[:, :T]
+        t_eval = t_eval[:T]
+        # print(T, t_eval)
+        # lets do half
     R.RESULT['train_mus_raw'] = train_mus
     R.RESULT['test_mus_raw'] = test_mus
 

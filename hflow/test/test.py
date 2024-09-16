@@ -45,7 +45,7 @@ def test_model(cfg: Config, data, s_fn, opt_params, key):
         true_sol = sol[mu_i]
 
         start = time.time()
-        if cfg.loss.loss_fn == 'ov':
+        if cfg.loss.loss_fn == 'ov' or cfg.loss.loss_fn == 'fd':
             test_sol = solve_test_sde(s_fn, opt_params, ics[mu_i], t_int,
                                       test_cfg.dt, sigma, mus[mu_i], key)
         elif cfg.loss.loss_fn == 'ncsm':
