@@ -11,17 +11,43 @@ from nrom.io.utils import flatten_dataclass, set_dataclass_attr, save_pickle
 from nrom.misc.misc import unique_id
 
 from tqdm import tqdm
+# python hflow/qsub.py -n sweep100 -t 10
 
-PROBLEM = 'vtwo'
+
 COMMANDS = [
 
-    # f'-cn=vlasov problem={PROBLEM} optimizer.iters=100_000 loss.sigma=1e-2',
-    # f'-cn=vlasov problem={PROBLEM} optimizer.iters=250_000 loss.sigma=1e-2',
-    f'-cn=vlasov problem={PROBLEM} optimizer.iters=25_000 loss.sigma=1e-3',
-    f'-cn=vlasov problem={PROBLEM} optimizer.iters=25_000 loss.sigma=5e-3',
-    f'-cn=vlasov problem={PROBLEM} optimizer.iters=25_000 loss.sigma=1e-2',
-    f'-cn=vlasov problem={PROBLEM} optimizer.iters=25_000 loss.sigma=5e-2',
-    f'-cn=vlasov problem={PROBLEM} optimizer.iters=25_000 loss.sigma=1e-1',
+    # f'-cn=trap optimizer.iters=25_000 loss.sigma=1e-3',
+    # f'-cn=trap optimizer.iters=25_000 loss.sigma=1e-2',
+    # f'-cn=trap optimizer.iters=25_000 loss.sigma=1e-1',
+    # f'-cn=trap optimizer.iters=25_000 loss.sigma=0.0',
+
+    # f'-cn=trap optimizer.iters=50_000 loss.sigma=1e-3',
+    # f'-cn=trap optimizer.iters=50_000 loss.sigma=1e-2',
+    # f'-cn=trap optimizer.iters=50_000 loss.sigma=1e-1',
+    # f'-cn=trap optimizer.iters=50_000 loss.sigma=0.0',
+    # f'-cn=osc problem=bi optimizer.iters=25_000 loss.sigma=1e-2 test.save_sol=True',
+    # f'-cn=osc problem=bi optimizer.iters=25_000 loss.sigma=1e-1 test.save_sol=True',
+    # f'-cn=osc problem=bi optimizer.iters=25_000 loss.sigma=0.0 test.save_sol=True',
+    #     f'-cn=lz9 problem=lz9 optimizer.iters=100_000 loss.sigma=5e-2 test.save_sol=True',
+    #     f'-cn=lz9 problem=lz9 optimizer.iters=100_000 loss.sigma=6e-2 test.save_sol=True',
+    #     f'-cn=lz9 problem=lz9 optimizer.iters=100_000 loss.sigma=7e-2 test.save_sol=True',
+    #     f'-cn=lz9 problem=lz9 optimizer.iters=100_000 loss.sigma=8e-2 test.save_sol=True',
+    #     f'-cn=lz9 problem=lz9 optimizer.iters=100_000 loss.sigma=9e-2 test.save_sol=True',
+    #     f'-cn=lz9 problem=lz9 optimizer.iters=100_000 loss.loss_fn=ncsm test.save_sol=True',
+    #     f'-cn=lz9 problem=lz9 optimizer.iters=100_000 loss.loss_fn=cfm  test.save_sol=True',
+    #     f'-cn=lz9 problem=lz9 optimizer.iters=100_000 loss.loss_fn=ncsm loss.T=50 test.save_sol=True',
+    #     f'-cn=lz9 problem=lz9 optimizer.iters=100_000 loss.loss_fn=cfm  loss.T=50 test.save_sol=True',
+    #     f'-cn=lz9 problem=lz9 optimizer.iters=100_000 loss.loss_fn=ncsm loss.T=25 test.save_sol=True',
+    #     f'-cn=lz9 problem=lz9 optimizer.iters=100_000 loss.loss_fn=cfm  loss.T=25 test.save_sol=True',
+
+    f'-cn=lz9 problem=lz92     optimizer.iters=100_000 loss.sigma=7e-2 test.save_sol=True  sample.scheme_t=rand  sample.scheme_n=rand  sample.bs_n=1',
+    f'-cn=vlasov problem=vtwo  optimizer.iters=50_000  loss.sigma=5e-2 test.save_sol=True  sample.scheme_t=rand  sample.scheme_n=rand  sample.bs_n=1',
+    f'-cn=vlasov problem=vbump optimizer.iters=50_000  loss.sigma=5e-3 test.save_sol=True  sample.scheme_t=rand  sample.scheme_n=rand  sample.bs_n=1',
+    f'-cn=lz9 problem=lz92     optimizer.iters=100_000 loss.sigma=7e-2 test.save_sol=True  sample.scheme_t=rand  sample.scheme_n=rand  sample.bs_n=256',
+    f'-cn=vlasov problem=vtwo  optimizer.iters=50_000  loss.sigma=5e-2 test.save_sol=True  sample.scheme_t=rand  sample.scheme_n=rand  sample.bs_n=256',
+    f'-cn=vlasov problem=vbump optimizer.iters=50_000  loss.sigma=5e-3 test.save_sol=True  sample.scheme_t=rand  sample.scheme_n=rand  sample.bs_n=256',
+
+
 ]
 
 
