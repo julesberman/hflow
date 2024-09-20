@@ -8,8 +8,7 @@ from jax import grad, jacfwd, jacrev, jit, jvp, vmap
 from jax.experimental.host_callback import id_print
 
 from hflow.config import Loss, Sample
-from hflow.misc.jax import batchmap, hess_trace_estimator, tracewrap
-from hflow.train.loss_fd import FD_Loss
+from hflow.misc.jax import batchmap, hess_trace_estimator, tracewrap, meanvmap
 
 
 def get_loss_fn(loss_cfg: Loss, sample_cfg: Sample, s_fn):
@@ -18,7 +17,7 @@ def get_loss_fn(loss_cfg: Loss, sample_cfg: Sample, s_fn):
         loss_fn = OV_Loss(
             s_fn, noise=loss_cfg.noise, sigma=loss_cfg.sigma, trace=loss_cfg.trace, t_batches=loss_cfg.t_batches, n_batches=loss_cfg.n_batches)
     elif loss_cfg.loss_fn == 'fd':
-        loss_fn = FD_Loss(s_fn, sample_cfg.bs_t, sample_cfg.bs_n)
+        loss_fn = FD_Loss(s_fn, sigma=loss_cfg.sigma, trace=loss_cfg.trace, impl=loss_cfg.impl)  
     elif loss_cfg.loss_fn == 'ncsm':
         sigmas = generate_sigmas(loss_cfg.L)
         loss_fn = NCSM_Loss(s_fn, sigmas, t_batches=loss_cfg.t_batches)
@@ -30,73 +29,95 @@ def get_loss_fn(loss_cfg: Loss, sample_cfg: Sample, s_fn):
     return loss_fn
 
 
-# def FD_Loss(s):
+def FD_Loss(s, sigma=0.0, trace='true', impl=1):
 
-#     def s_sep(mu, x, t, params):
-#         mu_t = jnp.concatenate([mu, t])
-#         return s(mu_t, x, params)
+    def s_sep(mu, x, t, params):
+        mu_t = jnp.concatenate([mu, t])
+        return s(mu_t, x, params) - s(mu_t, jnp.zeros_like(x), params)
 
-#     s_Vx = vmap(s_sep, in_axes=(None, 0, None, None))
+    s_Ex = meanvmap(s_sep, in_axes=(None, 0, None, None))
+    s_Ex_Vt = vmap(s_Ex, in_axes=(None, 0, 0, None))
 
-#     def loss_fn(params, x_t_batch, mu, t_batch, quad_weights, key):
+    s_dx = jacrev(s_sep, 1)
+    s_dx_sq = lambda *args: jnp.sum(s_dx(*args)**2)
 
-#         x_batch = x_t_batch[1:-1]  # T, N, D
-#         t_batch = t_batch[1:-1]  # T
+    sq_dx_Ex = meanvmap(s_dx_sq, in_axes=(None, 0, None, None))
+    sq_dx_Ex_Vt = vmap(sq_dx_Ex, in_axes=(None, 0, 0, None))
 
-#         times = t_batch
-#         integration_weights = 0.5 * jnp.concatenate([jnp.array([times[1] - times[0]]),
-#                                                     (times[2:] - times[:-2]),
-#                                                     jnp.array([times[-1] - times[-2]])])
+    # if trace == 'hutch':
+    #     laplace = hess_trace_estimator(s_sep, argnum=1)
+    #     laplace_Ex = meanvmap(laplace, in_axes=(None, None, 0, None, None))
+    #     hutch_laplace_Ex_Vt = vmap(laplace_Ex, in_axes=(None, None, 0, 0, None))
+    # else:
+    laplace = tracewrap(jacfwd(s_dx, 1))
+    laplace_Ex = meanvmap(laplace, in_axes=(None, 0, None, None))
+    laplace_Ex_Vt = vmap(laplace_Ex, in_axes=(None, 0, 0, None))
 
-#         def expected_value(F, x, t, mu):
-#             f_x = F(mu, x, t, params)
-#             print(f_x.shape)
-#             return jnp.mean(f_x)
+    def loss_fn(params, x_t_batch, mu, t_batch, quad_weights, key):
 
-#         E_s_v = vmap(partial(expected_value, s_Vx), (0, 0, None))
+     
+        dists = t_batch[1:] - t_batch[:-1]
+        dists = jnp.squeeze(dists) * 0.5
 
-#         t_1 = times[:-1]  # T -1
-#         t_p1 = times[1:]  # T-1
-#         x_1 = x_batch[:-1]  # T-1, N, D
-#         x_p1 = x_batch[1:]  # T-1, N, D
+        s_XT_p1 = s_Ex_Vt(mu, x_t_batch[1:], t_batch[:-1], params)
+        s_XT_m1 = s_Ex_Vt(mu, x_t_batch[:-1], t_batch[1:], params)
+        s_XT_a = s_Ex_Vt(mu, x_t_batch, t_batch, params)
 
-#         loss = 0
+        diff = s_XT_p1 - s_XT_m1 + s_XT_a[1:] - s_XT_a[:-1]
+        diff = jnp.sum(diff) 
 
-#         sum_En_snplus1 = jnp.sum(E_s_v(x_1, t_p1, mu))
-#         sum_Enplus1_sn = jnp.sum(E_s_v(x_p1, t_1, mu))
-#         sum_En_sn = jnp.sum(E_s_v(x_1, t_1, mu))
-#         sum_Enplus1_snplus1 = jnp.sum(E_s_v(x_p1, t_p1, mu))
-#         loss += (+ 0.5 * sum_En_snplus1
-#                  - 0.5 * sum_Enplus1_sn
-#                  + 0.5 * sum_En_sn
-#                  - 0.5 * sum_Enplus1_snplus1)
+        # # diff 2
+        # s_00 = s_Ex(mu, x_t_batch[0], t_batch[0], params)
+        # s_TT = s_Ex(mu, x_t_batch[-1], t_batch[-1], params)
+        # end_pt = s_TT - s_00
+        # diff2 = s_XT_p1 - s_XT_m1
+        # diff2 = jnp.sum(diff2) + end_pt
 
-#         def nabla_s(params, x, t, mu):
-#             return jax.grad(lambda x: s_sep(mu, x, t, params))(x)
+        # id_print(diff)
+        # id_print(diff2)
 
-#         def nabla_s_squared(params, x, t, mu):
-#             return jnp.sum(nabla_s(params, x, t, mu)**2)
+        sdx_XT = sq_dx_Ex_Vt(mu, x_t_batch, t_batch, params) # T
+        grad = sdx_XT[:-1]+sdx_XT[1:]
+        grad = jnp.sum(grad*dists)
 
-#         def _grad_s_sq(mu, x, t, params): return nabla_s_squared(
-#             params, x, t, mu)
+        loss = (grad - diff) * 0.5
+    
+        if sigma > 0.0:
+            lap = laplace_Ex_Vt(mu, x_t_batch, t_batch, params)
+            lap = lap[:-1]+lap[1:]
+            lap = jnp.sum(lap*dists)
+            lap = 0.5 * sigma**2 * lap
+            loss += lap
 
-#         _grad_s_sq_V = vmap(_grad_s_sq, in_axes=(None, 0, None, None))
-#         def E_grad_s_sq(x, t): return expected_value(
-#             _grad_s_sq_V, x, t, mu)
+        return loss
 
-#         grad_s_sq = jax.vmap(E_grad_s_sq, (0, 0))(x_batch, times)
+        # # IMPLEMENTAION 2
+        # if impl == 2:
+        #     dists = t_batch[1:] - t_batch[:-1]
+        #     dists = jnp.squeeze(dists) * 0.5
 
-#         id_print(loss)
+        #     s_XT_p1 = s_Ex_Vt(mu, x_t_batch[1:], t_batch[:-1], params)
+        #     s_XT_m1 = s_Ex_Vt(mu, x_t_batch[:-1], t_batch[1:], params)
+        #     s_XT_a = s_Ex_Vt(mu, x_t_batch, t_batch, params)
 
-#         sum_En_gradsn = 0.5 * \
-#             jnp.sum(integration_weights * grad_s_sq)
-#         id_print(sum_En_gradsn)
+        #     diff = s_XT_p1 - s_XT_m1 + s_XT_a[1:] - s_XT_a[:-1]
+    
+        #     sdx_XT = sq_dx_Ex_Vt(mu, x_t_batch, t_batch, params) # T
+        #     grad = sdx_XT[:-1]+sdx_XT[1:]
+        #     grad = grad*dists
 
-#         loss += sum_En_gradsn
+        #     loss = (grad - diff).mean() * 0.5
+        
+        #     if sigma > 0.0:
+        #         lap = laplace_Ex_Vt(mu, x_t_batch, t_batch, params)
+        #         lap = lap[:-1]+lap[1:]
+        #         lap = jnp.mean(lap*dists)
+        #         lap = 0.5 * sigma**2 * lap
+        #         loss += lap
 
-#         return loss
+        #     return loss
 
-#     return loss_fn
+    return loss_fn
 
 
 def OV_Loss(s, noise=0.0, sigma=0.0, return_interior=False, trace='true', t_batches=1, n_batches=1, fd_time=False):

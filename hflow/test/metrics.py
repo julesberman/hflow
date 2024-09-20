@@ -5,12 +5,14 @@ import scipy
 from einops import rearrange
 from jax import jacfwd, jacrev, jit, vmap
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 import hflow.io.result as R
 from hflow.config import Test
 from hflow.io.utils import log
 from hflow.misc.jax import batchmap, hess_trace_estimator, tracewrap
 
+from hydra.core.hydra_config import HydraConfig
 
 def get_cov_diag(A):
     return jnp.diag(jnp.cov(A, rowvar=False))
@@ -84,6 +86,15 @@ def compute_metrics(test_cfg: Test, true_sol, test_sol, mu_i):
         R.RESULT[f'true_electric_{mu_i}'] = true_electric
         R.RESULT[f'test_electric_{mu_i}'] = test_electric
 
+        outdir = HydraConfig.get().runtime.output_dir
+        t_int = np.linspace(0, 1, len(test_electric))
+        plt.plot(t_int, true_electric, label="True")
+        plt.plot(t_int, test_electric, label="Test")
+        plt.xlabel("time")
+        plt.ylabel('electric energy')
+        plt.savefig(f'{outdir}/electric_{mu_i}.png')
+        plt.clf()
+
         err_electric = np.abs(
             true_electric - test_electric) / np.abs(true_electric)
         err_electric = np.mean(err_electric)
@@ -100,6 +111,24 @@ def compute_metrics(test_cfg: Test, true_sol, test_sol, mu_i):
         mean_sink_dist = np.mean(s_time)
         R.RESULT[f'mean_sink_dist_{mu_i}'] = mean_sink_dist
         log.info(f'mean_sink_dist_{mu_i}: {mean_sink_dist:.3e}')
+
+
+def average_metrics(mus):
+
+    # compute averages
+    metrics = ['err_electric', 'test_integrate_time', 'FOM_integrate_time', 'mean_sink_dist']
+    for metric in metrics:
+        count = 0
+        total = 0
+        for mu_i in range(len(mus)):
+            key = f'metric_{mu_i}'
+            if key in R.RESULT:
+                total += R.RESULT[key]
+                count += 1
+
+        if count > 0:
+            R.RESULT[f'{metric}_total'] = total/count
+            
 
 
 def compute_wasserstein_scipy(A, B):

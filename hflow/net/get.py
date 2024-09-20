@@ -4,6 +4,7 @@ import numpy as np
 from hflow.config import Config, Network
 from hflow.net.build import build_colora, build_mlp
 
+from jax.experimental.host_callback import id_print
 
 def get_network(cfg: Config, data, key):
 
@@ -49,6 +50,7 @@ def get_network(cfg: Config, data, key):
 
         def s_fn(t, x, params):
             psi, theta = params
+            
             phi = h_fn(psi, t)
             return jnp.squeeze(u_fn(theta, phi, x))
     elif cfg.unet.model == 'film':

@@ -14,7 +14,7 @@ from hflow.config import Config
 from hflow.data.ode import odeint_euler, odeint_euler_maruyama, odeint_rk4
 from hflow.data.sde import solve_sde_ic
 from hflow.io.utils import log
-from hflow.misc.jax import batchmap, get_rand_idx
+from hflow.misc.jax import batchmap, get_rand_idx, meanvmap
 from hflow.test.metrics import compute_metrics
 from hflow.test.plot import plot_test
 from hflow.train.loss import generate_sigmas
@@ -64,11 +64,39 @@ def test_model(cfg: Config, data, s_fn, opt_params, key):
 
         compute_metrics(test_cfg, true_sol, test_sol, mu_i)
 
+
         plot_test(test_cfg, true_sol, test_sol,
                   t_int, test_cfg.n_plot_samples, mu_i)
 
+        if test_cfg.additional:
+            additional_ops(s_fn, opt_params, test_sol, t_int, mus[mu_i], mu_i)
+
     return test_sol
 
+
+def additional_ops(s_fn, opt_params, test_sol, t_int, mu, mu_i):
+
+    t_int = t_int.reshape(-1, 1)
+
+    def s_sep(mu, x, t, params):
+        mu_t = jnp.concatenate([mu, t])
+        return s_fn(mu_t, x, params) #- s(mu_t, jnp.zeros_like(x), params)
+
+    s_Ex = meanvmap(s_sep, in_axes=(None, 0, None, None))
+    s_Ex_Vt = vmap(s_Ex, in_axes=(None, 0, 0, None))
+
+
+    Es_time = s_Ex_Vt(mu, test_sol, t_int, opt_params)
+
+    R.RESULT[f'Es_time_{mu_i}'] = Es_time
+    outdir = HydraConfig.get().runtime.output_dir
+
+    plt.plot(t_int, Es_time)
+    plt.xlabel("time")
+    plt.ylabel('E[s]')
+    plt.title("E[s] over time")
+    plt.savefig(f'{outdir}/Es_time_{mu_i}.png')
+    plt.clf()
 
 def solve_test_cfm(s_fn, params, ics, t_int, mu, T):
 

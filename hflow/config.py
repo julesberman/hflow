@@ -9,25 +9,20 @@ from omegaconf import OmegaConf
 from hflow.misc.misc import epoch_time, unique_id
 
 SWEEP = {
-    'problem': 'bi',
-    'optimizer.iters': '25_000',  # ,50_000',
-    'loss.sigma': '0.0',
-    'test.save_sol': 'False',
-
-    'sample.scheme_t': 'equi',
-
-    'sample.bs_n':  '128',
-    'sample.bs_t':  '256',
-
-
+    'problem': 'osc',
+    'optimizer.iters': '10_000,25_000',  # ,50_000',
+    'loss.loss_fn': 'fd',
+    'loss.impl': '1,2',
+    'seed': '1,2,3'
 }
 
 SLURM_CONFIG = {
-    'timeout_min': 60*3,
+    'timeout_min': 60*1,
     'cpus_per_task': 4,
     'mem_gb': 50,
     # 'gpus_per_node': 1,
-    'gres': 'gpu'
+    'gres': 'gpu:h100:1',
+    'account': 'extremedata'
 }
 
 
@@ -77,6 +72,7 @@ class Loss:
     T: int = 100
     t_batches: int = 1
     n_batches: int = 1
+    impl: int = 1
 
 
 @dataclass
@@ -84,7 +80,7 @@ class Sample:
     bs_n: int = 256
     bs_t: int = 256
     scheme_t: str = 'gauss'
-    scheme_n: str = 'traj'
+    scheme_n: str = 'rand'
 
 
 @dataclass
@@ -103,6 +99,7 @@ class Test:
     save_sol: bool = False
     mean: bool = False
     wass: bool = False
+    additional: bool = True
 
 
 @dataclass

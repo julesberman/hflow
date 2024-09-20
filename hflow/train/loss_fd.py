@@ -11,9 +11,10 @@ from hflow.config import Data, Loss
 from hflow.misc.jax import batchmap, hess_trace_estimator, tracewrap
 
 
-def FD_Loss(s_comb, bs_t, bs_n):
+def FD_Loss(s_comb, bs_t, bs_n, sigma):
 
     def s(params, x, t, mu):
+        t = t.reshape(1)
         mu_t = jnp.concatenate([mu, t])
 
         return s_comb(mu_t, x, params) - s_comb(mu_t, jnp.zeros_like(x), params)
@@ -24,28 +25,23 @@ def FD_Loss(s_comb, bs_t, bs_n):
     def nabla_s_squared(params, x, t, mu):
         return jnp.sum(nabla_s(params, x, t, mu)**2)
 
+    def laplace_s(params, x, t, mu):
+        return jnp.sum(jnp.diag(jax.hessian(lambda x: s(params, x, t, mu))(x)))
+        
     def loss_fn(params, x_data, i_mu, t_data, mu_data, key):
+
+        t_data = jnp.squeeze(t_data)
 
         def expected_value(f, it1, it2, i_mu, key):
 
             # get a random subset of x at time t1
             t2 = t_data[it2]
+
             x = get_random_subset(key, x_data[:, it1, i_mu], bs_n)
             mu = mu_data[i_mu]
             # evaluate f at the time t2 at all x and average
             # signature of f should be (x, t, mu)
             return jnp.mean(jax.vmap(lambda _x: f(_x, t2, mu))(x))
-
-        # def expected_value(f, t1, t2, i_mu, key):
-        #     # get a random subset of x at time t1
-        #     dt = t_data[1]
-        #     it1 = jnp.int32(t1/dt)
-
-        #     x = get_random_subset(key, x_data[:, it1, i_mu, :], bs_n)
-
-        #     # evaluate f at the time t2 at all x and average
-        #     # signature of f should be (x, t, mu)
-        #     return jnp.mean(jax.vmap(lambda _x: f(_x, t2, mu))(x))
 
         def get_uniform_subset(arr, bs):
             N = len(arr)
@@ -98,7 +94,15 @@ def FD_Loss(s_comb, bs_t, bs_n):
                  - 0.5 * sum_Enplus1_sn
                  + 0.5 * sum_En_sn
                  - 0.5 * sum_Enplus1_snplus1)
+
         loss += sum_En_gradsn
+
+        if sigma > 0:
+            _laplace_s = lambda x, t, mu: laplace_s(params, x, t, mu)
+            E_laplace_s = lambda t1, t2, key: expected_value(_laplace_s, t1, t2, i_mu, key)
+            sum_En_laplace_s = 0.5 * sigma**2 * jnp.sum( integration_weights * jax.vmap(E_laplace_s)(it_s, it_s, x_keys)) 
+            loss += sum_En_laplace_s
+
 
         return loss
 

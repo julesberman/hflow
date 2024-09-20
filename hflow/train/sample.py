@@ -23,48 +23,30 @@ def get_arg_fn(sample_cfg: Sample, data):
     bs_n = sample_cfg.bs_n
     quad_weights = None
     M, T, N, D = sols.shape
-
+    t_data = t_data / t_data[-1]
+    
     if sample_cfg.scheme_t == 'fixed':
-        sols = rearrange(sols, 'M T N D -> N T M D')
-
         def args_fn(key, percent):
 
             nonlocal sols
             nonlocal t_data
             nonlocal mu_data
-            N, T, M, D = sols.shape
+       
             sols = jnp.asarray(sols)
-            keyn, keym, keyl = jax.random.split(key, num=3)
+            keyn, keym = jax.random.split(key)
 
             m_idx = jax.random.randint(keym, minval=0, maxval=M, shape=())
 
-            return sols, m_idx, t_data, mu_data
+            return sols, mu_data[m_idx], t_data, quad_weights, keyn
+
         return args_fn
-    t_data = t_data / t_data[-1]
+    
     if sample_cfg.scheme_t == 'gauss':
         g_pts_01, quad_weights = gauss_quadrature_weights_points(
             bs_t, a=0.0, b=1.0)
         start, end = jnp.asarray([0]), jnp.asarray([1.0])
         g_pts_01 = jnp.concatenate([start, g_pts_01, end])
 
-    # elif sample_cfg.scheme_t == 'piece':
-
-    #     pts_per_seg = bs_t
-    #     segs = bs_t // pts_per_seg
-
-    #     t_split = jnp.array_split(t_data, segs)
-    #     quad_weights = []
-    #     t_gauss = []
-
-    #     for t_sl in t_split:
-    #         g_pts_t, qw = gauss_quadrature_weights_points(
-    #             pts_per_seg, a=t_sl[0], b=t_sl[-1])
-    #         t_gauss.append(g_pts_t)
-    #         quad_weights.append(qw)
-
-    #     start, end = jnp.asarray([0]), jnp.asarray([1.0])
-    #     g_pts_01 = jnp.concatenate([start, *t_gauss, end])
-    #     quad_weights = jnp.concatenate(quad_weights)
 
     elif sample_cfg.scheme_t == 'equi':
         g_pts_01 = jnp.linspace(0.0, 1.0, bs_t)
@@ -119,6 +101,7 @@ def get_data_fn(sols, mu_data, t_data, quad_weights, bs_n, bs_t, scheme_t, schem
             t_idx = jax.random.choice(keyt, T-1, shape=(bs_t,), replace=False)
             start, end = jnp.asarray([0]), jnp.asarray([T-1])
             t_idx = jnp.concatenate([start, t_idx, end])
+            t_idx = jnp.sort(t_idx)
             t_sample = t_data[t_idx]
             sols_sample = sols_sample[t_idx]
         else:
