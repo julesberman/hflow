@@ -88,8 +88,8 @@ def compute_metrics(test_cfg: Test, true_sol, test_sol, mu_i):
 
         outdir = HydraConfig.get().runtime.output_dir
         t_int = np.linspace(0, 1, len(test_electric))
-        plt.plot(t_int, true_electric, label="True")
-        plt.plot(t_int, test_electric, label="Test")
+        plt.semilogy(t_int, true_electric, label="True")
+        plt.semilogy(t_int, test_electric, label="Test")
         plt.xlabel("time")
         plt.ylabel('electric energy')
         plt.savefig(f'{outdir}/electric_{mu_i}.png')

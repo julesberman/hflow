@@ -8,18 +8,74 @@ from omegaconf import OmegaConf
 
 from hflow.misc.misc import epoch_time, unique_id
 
+# SWEEP = {
+#     'problem': 'vbump,vtwo',
+#     'optimizer.iters': '25_000',  # ,50_000',
+#     'loss.loss_fn': 'fd',
+#     'seed': '1',
+#     'sample.scheme_t': 'rand',
+#     'loss.sigma': '1e-1,5e-2,2e-2,1e-2,5e-3,2e-3,1e-3,0.0',
+#     'sample.bs_t': '256',
+#     'sample.bs_n': '256',
+#     'x64': 'True',
+#     'test.save_sol': 'True'
+
+# }
+
+
+
+# SWEEP = {
+#     'problem': 'lz9',
+#     'optimizer.iters': '10_000,25_000,50_000',  # ,50_000',
+#     'loss.loss_fn': 'fd',
+#     'seed': '1',
+#     'sample.scheme_t': 'rand,equi,dirc',
+#     'loss.sigma': '1.25e-1,1e-1',
+#     'sample.bs_t': '256',
+#     'sample.bs_n': '256',
+#     'unet.width': '64,85',
+#     'x64': 'True',
+#     'test.save_sol': 'False'
+
+# }
+
+
+# SWEEP = {
+#     'problem': 'v62',
+#     'optimizer.iters': '25_000,50_000',  # ,50_000',
+#     'loss.loss_fn': 'fd',
+#     'seed': '1',
+#     'sample.scheme_t': 'rand,equi',
+#     'loss.sigma': '1e-3,1e-4,0.0',
+#     'sample.bs_t': '240',
+#     'sample.bs_n': '256',
+#     'unet.width': '64',
+#     'x64': 'True',
+#     'test.save_sol': 'False',
+#     'data.t_end': '6,8,10',
+
+# }
+
+
+
+
 SWEEP = {
-    'problem': 'osc',
-    'optimizer.iters': '10_000,25_000',  # ,50_000',
-    'loss.loss_fn': 'fd',
-    'loss.impl': '1,2',
-    'seed': '1,2,3'
+    'problem': 'lin',
+    'optimizer.iters': '25_000',  # ,50_000',
+    'loss.loss_fn': 'fd,ov',
+    'seed': '1',
+    'sample.scheme_t': 'rand,gauss',
+    'x64': 'True',
+    'loss.sigma': '0.0',
+    'test.save_sol': 'False',
+    'data.omega': '6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 18.0, 20.0'
 }
 
+
 SLURM_CONFIG = {
-    'timeout_min': 60*1,
+    'timeout_min': 30,
     'cpus_per_task': 4,
-    'mem_gb': 50,
+    'mem_gb': 100,
     # 'gpus_per_node': 1,
     'gres': 'gpu:h100:1',
     'account': 'extremedata'
@@ -59,6 +115,7 @@ class Data:
     save: bool = False
     load: bool = False
     dim: Union[int, None] = None
+    omega: float = 4.0
 
 
 @dataclass
@@ -67,7 +124,7 @@ class Loss:
     noise: float = 0.0
     sigma: float = 1e-1
     log: bool = False
-    trace: str = 'hutch'
+    trace: str = 'normal'
     L: int = 10
     T: int = 100
     t_batches: int = 1
@@ -79,9 +136,10 @@ class Loss:
 class Sample:
     bs_n: int = 256
     bs_t: int = 256
-    scheme_t: str = 'gauss'
+    scheme_t: str = 'rand'
     scheme_n: str = 'rand'
-
+    scheme_w: str = 'normal'
+    all_mu: bool = False
 
 @dataclass
 class Test:
@@ -121,7 +179,8 @@ class Config:
     # misc
     name: str = field(
         default_factory=lambda: f'{unique_id(4)}_{epoch_time(2)}')
-    x64: bool = False  # whether to use 64 bit precision in jax
+    x64: bool = True  # whether to use 64 bit precision in jax
+    
     platform: Union[str, None] = None  # gpu or cpu, None will let jax default
     # output_dir: str = './results/${hydra.job.name}'  # where to save results, if None nothing is saved
 
@@ -203,8 +262,8 @@ vlasov_config = Config(problem='vtwo',
                        test=Test(plot_hist=True, electric=True, wass=True, n_samples=25_000))
 
 
-osc_config = Config(problem='bi',
-                    data=Data(t_end=12, dt=1e-2, n_samples=25_000),
+bi_config = Config(problem='bi',
+                    data=Data(t_end=12, dt=5e-3, n_samples=25_000),
                     test=Test(plot_particles=True, mean=True, wass=True))
 
 
@@ -224,8 +283,8 @@ mdyn_config = Config(problem='mdyn',
                      test=Test(plot_particles=True, wass=True))
 
 lz9_config = Config(problem='lz9',
-                    data=Data(t_end=20, n_samples=25_000, dt=4e-2),
-                    loss=Loss(sigma=5e-2),
+                    data=Data(t_end=20, n_samples=10_000, dt=1e-2),
+                    loss=Loss(sigma=1e-1),
                     test=Test(plot_particles=True, wass=True, mean=True, n_samples=25_000, t_samples=32))
 
 
@@ -234,11 +293,16 @@ v6_config = Config(problem='v6',
                    data=Data(n_samples=25_000, t_end=6),
                    test=Test(plot_hist=True, wass=True, n_samples=25_000, electric=True))
 
+lin_config = Config(problem='lin',
+                    data=Data(t_end=1, dt=1e-3, n_samples=10_000),
+                    test=Test(plot_particles=True, mean=True, wass=True))
+
 
 cs.store(name="lz9", node=lz9_config)
 cs.store(name="mdyn", node=mdyn_config)
 cs.store(name="trap", node=trap_config)
 cs.store(name="trap2", node=trap2_config)
-cs.store(name="osc", node=osc_config)
+cs.store(name="bi", node=bi_config)
 cs.store(name="vlasov", node=vlasov_config)
 cs.store(name="v6", node=v6_config)
+cs.store(name="lin", node=lin_config)

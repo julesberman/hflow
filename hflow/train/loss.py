@@ -55,6 +55,9 @@ def FD_Loss(s, sigma=0.0, trace='true', impl=1):
 
     def loss_fn(params, x_t_batch, mu, t_batch, quad_weights, key):
 
+        # remove endpoints from OV loss
+        x_t_batch = x_t_batch[1:-1]
+        t_batch = t_batch[1:-1]
      
         dists = t_batch[1:] - t_batch[:-1]
         dists = jnp.squeeze(dists) * 0.5
@@ -65,16 +68,6 @@ def FD_Loss(s, sigma=0.0, trace='true', impl=1):
 
         diff = s_XT_p1 - s_XT_m1 + s_XT_a[1:] - s_XT_a[:-1]
         diff = jnp.sum(diff) 
-
-        # # diff 2
-        # s_00 = s_Ex(mu, x_t_batch[0], t_batch[0], params)
-        # s_TT = s_Ex(mu, x_t_batch[-1], t_batch[-1], params)
-        # end_pt = s_TT - s_00
-        # diff2 = s_XT_p1 - s_XT_m1
-        # diff2 = jnp.sum(diff2) + end_pt
-
-        # id_print(diff)
-        # id_print(diff2)
 
         sdx_XT = sq_dx_Ex_Vt(mu, x_t_batch, t_batch, params) # T
         grad = sdx_XT[:-1]+sdx_XT[1:]
@@ -90,32 +83,6 @@ def FD_Loss(s, sigma=0.0, trace='true', impl=1):
             loss += lap
 
         return loss
-
-        # # IMPLEMENTAION 2
-        # if impl == 2:
-        #     dists = t_batch[1:] - t_batch[:-1]
-        #     dists = jnp.squeeze(dists) * 0.5
-
-        #     s_XT_p1 = s_Ex_Vt(mu, x_t_batch[1:], t_batch[:-1], params)
-        #     s_XT_m1 = s_Ex_Vt(mu, x_t_batch[:-1], t_batch[1:], params)
-        #     s_XT_a = s_Ex_Vt(mu, x_t_batch, t_batch, params)
-
-        #     diff = s_XT_p1 - s_XT_m1 + s_XT_a[1:] - s_XT_a[:-1]
-    
-        #     sdx_XT = sq_dx_Ex_Vt(mu, x_t_batch, t_batch, params) # T
-        #     grad = sdx_XT[:-1]+sdx_XT[1:]
-        #     grad = grad*dists
-
-        #     loss = (grad - diff).mean() * 0.5
-        
-        #     if sigma > 0.0:
-        #         lap = laplace_Ex_Vt(mu, x_t_batch, t_batch, params)
-        #         lap = lap[:-1]+lap[1:]
-        #         lap = jnp.mean(lap*dists)
-        #         lap = 0.5 * sigma**2 * lap
-        #         loss += lap
-
-        #     return loss
 
     return loss_fn
 

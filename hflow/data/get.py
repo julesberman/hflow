@@ -24,7 +24,7 @@ from hflow.truth.sburgers import solve_sburgers_samples
 
 
 def read_from_hdf5(path, n_samples):
-    with h5py.File("/scratch/work/peherstorfer/tmb9910/struphy_data/" + path + ".hdf5", "r") as file:
+    with h5py.File("/scratch/jmb1174/data/" + path + ".hdf5", "r") as file:
         t_grid = file["t_grid"][:]
         sol = file["sol"][:, 0:n_samples, :]
         mu = file["mu"][()]
@@ -96,6 +96,7 @@ def get_data(problem, data_cfg: Data, key):
     elif problem == 'bi':
 
         train_mus = np.asarray([0.10, 0.15, 0.25, 0.3])
+        # train_mus = np.asarray([0.2])
         test_mus = np.asarray([0.2])
         mus = np.concatenate([train_mus, test_mus])
 
@@ -106,13 +107,17 @@ def get_data(problem, data_cfg: Data, key):
         sols = rearrange(sols, 'M N T D -> M T N D')
 
     elif problem == 'lin':
-        mus = np.asarray([0.10, 0.05, 0.0])
+        train_mus = np.asarray([data_cfg.omega])
+        test_mus = np.asarray([data_cfg.omega])
+        mus = np.concatenate([train_mus, test_mus])
 
         def solve_for_mu(mu):
             drift, diffusion = get_2d_lin(mu)
             return solve_sde(drift, diffusion, t_eval, get_ic_lin, n_samples, dt=data_cfg.dt, key=key)
         sols = vmap(jit(solve_for_mu))(mus)
         sols = rearrange(sols, 'M N T D -> M T N D')
+        sols = sols[:, :, :, :2]
+        
     elif problem == 'van':
         mus = np.asarray([0.0, 0.5, 1.0, 1.5, 2.0])
 

@@ -68,8 +68,8 @@ def test_model(cfg: Config, data, s_fn, opt_params, key):
         plot_test(test_cfg, true_sol, test_sol,
                   t_int, test_cfg.n_plot_samples, mu_i)
 
-        if test_cfg.additional:
-            additional_ops(s_fn, opt_params, test_sol, t_int, mus[mu_i], mu_i)
+        # if test_cfg.additional:
+        #     additional_ops(s_fn, opt_params, test_sol, t_int, mus[mu_i], mu_i)
 
     return test_sol
 
