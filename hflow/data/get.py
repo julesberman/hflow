@@ -303,6 +303,8 @@ def normalize_dataset(sols, mus, t_eval, normalize_data):
         sols, d_shift, d_scale = normalize(
             sols, axis=(0, 1, 2), return_stats=True, method='01')
         R.RESULT['data_norm'] = (d_shift, d_scale)
+    else:
+        R.RESULT['data_norm'] = (0.0, 1.0)
 
     R.RESULT['mu_norm'] = (mu_shift, mu_scale)
 

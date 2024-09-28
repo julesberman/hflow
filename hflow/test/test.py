@@ -21,6 +21,7 @@ from hflow.train.loss import generate_sigmas
 
 
 def test_model(cfg: Config, data, s_fn, opt_params, key):
+        
     test_cfg = cfg.test
     if not test_cfg.run:
         return None
@@ -62,7 +63,7 @@ def test_model(cfg: Config, data, s_fn, opt_params, key):
             R.RESULT[f'true_sol_{mu_i}'] = true_sol
             R.RESULT[f'test_sol_{mu_i}'] = test_sol
 
-        compute_metrics(test_cfg, true_sol, test_sol, mu_i)
+        compute_metrics(cfg, test_cfg, true_sol, test_sol, mu_i)
 
 
         plot_test(test_cfg, true_sol, test_sol,

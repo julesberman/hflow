@@ -61,14 +61,16 @@ from hflow.misc.misc import epoch_time, unique_id
 
 SWEEP = {
     'problem': 'lin',
-    'optimizer.iters': '25_000',  # ,50_000',
-    'loss.loss_fn': 'fd,ov',
-    'seed': '1',
-    'sample.scheme_t': 'rand,gauss',
+    'optimizer.iters': '10_000',  # ,50_000',
+    'loss.loss_fn': 'ov',
+    'seed': '4,5',
+    'sample.scheme_t': 'trap,simp,rand,gauss',
+    # 'sample.scheme_w': 'dist',
     'x64': 'True',
-    'loss.sigma': '0.0',
+    'loss.sigma': '1e-2',
     'test.save_sol': 'False',
-    'data.omega': '6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 18.0, 20.0'
+    'data.omega': '2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 18.0'
+    
 }
 
 
@@ -95,6 +97,7 @@ class Network:
     last_activation: Union[str, None] = 'none'
     w0: float = 8.0
     w_init: str = 'lecun'
+    fix_u: Union[bool, None] = None
 
 
 @dataclass
@@ -103,7 +106,7 @@ class Optimizer:
     iters: int = 25_000
     scheduler: bool = True
     optimizer: str = 'adam'
-
+    save_params_history: bool = False
 
 @dataclass
 class Data:
@@ -132,6 +135,7 @@ class Loss:
     impl: int = 1
 
 
+
 @dataclass
 class Sample:
     bs_n: int = 256
@@ -157,8 +161,7 @@ class Test:
     save_sol: bool = False
     mean: bool = False
     wass: bool = False
-    additional: bool = True
-
+    analytic: bool = False
 
 @dataclass
 class Config:
@@ -295,7 +298,7 @@ v6_config = Config(problem='v6',
 
 lin_config = Config(problem='lin',
                     data=Data(t_end=1, dt=1e-3, n_samples=10_000),
-                    test=Test(plot_particles=True, mean=True, wass=True))
+                    test=Test(plot_particles=True, mean=True, wass=True, analytic=True))
 
 
 cs.store(name="lz9", node=lz9_config)

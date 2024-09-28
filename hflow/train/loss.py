@@ -33,7 +33,7 @@ def FD_Loss(s, sigma=0.0, trace='true', impl=1):
 
     def s_sep(mu, x, t, params):
         mu_t = jnp.concatenate([mu, t])
-        return s(mu_t, x, params) - s(mu_t, jnp.zeros_like(x), params)
+        return s(mu_t, x, params)
 
     s_Ex = meanvmap(s_sep, in_axes=(None, 0, None, None))
     s_Ex_Vt = vmap(s_Ex, in_axes=(None, 0, 0, None))

@@ -15,6 +15,59 @@ from hflow.misc.jax import get_rand_idx
 from hflow.misc.misc import (gauss_quadrature_weights_points,
                              pts_array_from_space)
 
+def get_simpsons(N):
+    if (N - 1) % 2 != 0:
+            raise ValueError("Number of intervals N - 1 must be even for Simpson's rule (N must be odd).")
+
+    # Generate N equispaced points on [0,1]
+    points = np.linspace(0, 1, N)
+    h = 1 / (N - 1)  # Step size
+
+    # Initialize weights
+    weights = np.zeros(N)
+    weights[0] = h / 3
+    weights[-1] = h / 3
+
+    # Apply Simpson's coefficients
+    for i in range(1, N - 1):
+        if i % 2 == 0:
+            weights[i] = 2 * h / 3
+        else:
+            weights[i] = 4 * h / 3
+
+    points = jnp.asarray(points)
+    weights = jnp.asarray(weights)
+
+    return points, weights
+
+
+def get_simpsons_38(N):
+
+    if (N - 1) % 3 != 0:
+        raise ValueError("Number of intervals N - 1 must be a multiple of 3 for Simpson's 3/8 rule.")
+
+    points = np.linspace(0, 1, N)
+    h = 1 / (N - 1)  # Step size
+
+    # Initialize weights
+    weights = np.zeros(N)
+    num_groups = (N - 1) // 3
+
+    for group in range(num_groups):
+        idx_start = group * 3
+        idx_end = idx_start + 3  # Include idx_end in the group
+
+        # Assign weights according to Simpson's 3/8 rule
+        weights[idx_start] += 3 * h / 8
+        weights[idx_start + 1] += 9 * h / 8
+        weights[idx_start + 2] += 9 * h / 8
+        weights[idx_start + 3] += 3 * h / 8
+
+    points = jnp.asarray(points)
+    weights = jnp.asarray(weights)
+
+    return points, weights
+
 
 def get_arg_fn(sample_cfg: Sample, data):
     log.info("gettings samples...")
@@ -25,6 +78,8 @@ def get_arg_fn(sample_cfg: Sample, data):
     M, T, N, D = sols.shape
     t_data = t_data / t_data[-1]
     
+    w_scheme = sample_cfg.scheme_w
+
     if sample_cfg.scheme_t == 'fixed':
         sols = jnp.asarray(sols)
         mu_data = jnp.asarray(mu_data)
@@ -59,14 +114,28 @@ def get_arg_fn(sample_cfg: Sample, data):
 
     elif sample_cfg.scheme_t == 'trap':
         g_pts_01 = jnp.linspace(0.0, 1.0, bs_t)
-        quad_weights = jnp.ones((bs_t,)) * g_pts_01[1]
+        weight = jnp.concatenate([jnp.asarray([1.0]), 2*jnp.ones((bs_t-2,)), jnp.asarray([1.0])])
+        quad_weights = weight * g_pts_01[1] * 0.5
         start, end = jnp.asarray([0]), jnp.asarray([1.0])
         g_pts_01 = jnp.concatenate([start, g_pts_01, end])
 
-        quad_weights = quad_weights.at[0].set(0.5*quad_weights[0])
-        quad_weights = quad_weights.at[-1].set(0.5*quad_weights[-1])
+    elif sample_cfg.scheme_t == 'simp':
+        if (bs_t - 1) % 2 != 0:
+            bs_t += 1
+        g_pts_01, quad_weights = get_simpsons(bs_t)
+        start, end = jnp.asarray([0]), jnp.asarray([1.0])
+        g_pts_01 = jnp.concatenate([start, g_pts_01, end])
 
-    if sample_cfg.scheme_t != 'rand' and sample_cfg.scheme_t != 'dirc':
+    elif sample_cfg.scheme_t == 'simp38':
+        if (bs_t - 1) % 3 != 0:
+            bs_t = 3 * round(bs_t / 3)
+        g_pts_01, quad_weights = get_simpsons_38(bs_t)
+        start, end = jnp.asarray([0]), jnp.asarray([1.0])
+        g_pts_01 = jnp.concatenate([start, g_pts_01, end])
+
+
+
+    if sample_cfg.scheme_t != 'rand' and sample_cfg.scheme_t != 'arcsin':
         new_sols = []
         for i, sol_mu in enumerate(sols):
             ss = interplate_in_t(sol_mu, t_data, g_pts_01)
@@ -75,9 +144,12 @@ def get_arg_fn(sample_cfg: Sample, data):
         sols = np.asarray(new_sols)
         t_data = g_pts_01
 
+    # if sample_cfg.scheme_t == 'arcsin':
+    #     w_scheme = 'dist'
+
     log.info(f'sample shape {sols.shape}')
     args_fn = get_data_fn(sols, mu_data, t_data, quad_weights,
-                          bs_n, bs_t, sample_cfg.scheme_t, sample_cfg.scheme_n, sample_cfg.scheme_w)
+                          bs_n, bs_t, sample_cfg.scheme_t, sample_cfg.scheme_n, w_scheme)
 
     return args_fn
 
@@ -110,9 +182,8 @@ def get_data_fn(sols, mu_data, t_data, quad_weights, bs_n, bs_t, scheme_t, schem
             t_idx = jnp.sort(t_idx)
             t_sample = t_data[t_idx]
             sols_sample = sols_sample[t_idx]
-        elif scheme_t == 'dirc':
-            alpha = 5.0
-            t_idx = dirichlet_indices(key, bs_t, T-1, alpha)
+        elif scheme_t == 'arcsin':
+            t_idx = arcsin_indices(key, bs_t, T-1)
             start, end = jnp.asarray([0]), jnp.asarray([T-1])
             t_idx = jnp.concatenate([start, t_idx, end])
             t_idx = jnp.sort(t_idx)
@@ -168,3 +239,13 @@ def dirichlet_indices(key, n_samples, N_index, alpha):
     points = cumulative[:-1]
     indices = jnp.asarray(jnp.round(points*N_index,0), dtype=jnp.int32)
     return indices
+
+
+def arcsin_indices(key, n_samples, N_index):
+    alpha, beta = 0.5, 0.5
+    points = jax.random.beta(key, alpha, beta, shape=(n_samples,))
+    indices = jnp.asarray(jnp.round(points*N_index,0), dtype=jnp.int32)
+    return indices
+
+
+

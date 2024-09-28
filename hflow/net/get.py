@@ -20,7 +20,7 @@ def get_network(cfg: Config, data, key):
         out_dim = 1
     elif cfg.loss.loss_fn == 'ncsm' or cfg.loss.loss_fn == 'cfm' or cfg.loss.loss_fn == 'si':
         x_dim = D
-        mu_t_dim = MT+1  # one more for sigma
+        mu_t_dim = MT+1 # one more for sigma
         out_dim = D
 
     period = np.asarray([1.0]*x_dim)
@@ -77,5 +77,11 @@ def get_network(cfg: Config, data, key):
         def s_fn(t, x, params):
             t_x = jnp.concatenate([t, x])
             return jnp.squeeze(u_fn(params, t_x))
+
+
+    if cfg.unet.fix_u:
+        def s_fn_fixed(t, x, params):
+            return s_fn(t, x, params) - s_fn(t, x*0 +0.5, params)
+        return s_fn_fixed, params_init
 
     return s_fn, params_init
