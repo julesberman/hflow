@@ -49,6 +49,16 @@ def setup(config: Config):
     log.info(
         f'platform: {get_backend().platform} — device_count: {jax.local_device_count()}')
 
+    # Get the list of available devices (CPUs, GPUs, TPUs)
+    devices = jax.devices()
+
+    # Iterate through the devices and print details if it's a GPU
+    for device in devices:
+        if device.device_kind == "Gpu":
+            log.info(f"Device name: {device.device_kind}")
+            log.info(f"Device memory: {device.memory_amount / 1e9} GB")
+            log.info(f"Device specs: {device}")
+
     # set random seed, if none use random random seed
     if config.seed == -1:
         config.seed = secrets.randbelow(10_000)

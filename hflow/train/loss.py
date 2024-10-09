@@ -12,9 +12,12 @@ from hflow.misc.jax import batchmap, hess_trace_estimator, tracewrap, meanvmap
 
 
 def get_loss_fn(loss_cfg: Loss, sample_cfg: Sample, s_fn):
-
+    
     if loss_cfg.loss_fn == 'ov':
         loss_fn = OV_Loss(
+            s_fn, noise=loss_cfg.noise, sigma=loss_cfg.sigma, trace=loss_cfg.trace)
+    elif loss_cfg.loss_fn == 'ov-old':
+        loss_fn = OV_Loss_old(
             s_fn, noise=loss_cfg.noise, sigma=loss_cfg.sigma, trace=loss_cfg.trace, t_batches=loss_cfg.t_batches, n_batches=loss_cfg.n_batches)
     elif loss_cfg.loss_fn == 'fd':
         loss_fn = FD_Loss(s_fn, sigma=loss_cfg.sigma, trace=loss_cfg.trace, impl=loss_cfg.impl)  
@@ -86,8 +89,10 @@ def FD_Loss(s, sigma=0.0, trace='true', impl=1):
 
     return loss_fn
 
+def OV_Loss(s, noise=0.0, sigma=0.0, trace='true'):
+    pass
 
-def OV_Loss(s, noise=0.0, sigma=0.0, return_interior=False, trace='true', t_batches=1, n_batches=1, fd_time=False):
+def OV_Loss_old(s, noise=0.0, sigma=0.0, return_interior=False, trace='true', t_batches=1, n_batches=1):
 
     def s_sep(mu, t, x, params):
         mu_t = jnp.concatenate([mu, t])

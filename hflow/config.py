@@ -9,12 +9,12 @@ from omegaconf import OmegaConf
 from hflow.misc.misc import epoch_time, unique_id
 
 # SWEEP = {
-#     'problem': 'vbump,vtwo',
-#     'optimizer.iters': '25_000',  # ,50_000',
-#     'loss.loss_fn': 'fd',
+#     'problem': 'vtwo',
+#     'optimizer.iters': '25_000,50_000',  # ,50_000',
+#     'loss.loss_fn': 'ov',
 #     'seed': '1',
-#     'sample.scheme_t': 'rand',
-#     'loss.sigma': '1e-1,5e-2,2e-2,1e-2,5e-3,2e-3,1e-3,0.0',
+#     'sample.scheme_t': 'gauss',
+#     'loss.sigma': '1e-1,5e-2,1e-2,0.0',
 #     'sample.bs_t': '256',
 #     'sample.bs_n': '256',
 #     'x64': 'True',
@@ -26,34 +26,32 @@ from hflow.misc.misc import epoch_time, unique_id
 
 # SWEEP = {
 #     'problem': 'lz9',
-#     'optimizer.iters': '10_000,25_000,50_000',  # ,50_000',
-#     'loss.loss_fn': 'fd',
+#     'optimizer.iters': '50_000',  # ,50_000',
+#     'loss.loss_fn': 'ov',
 #     'seed': '1',
-#     'sample.scheme_t': 'rand,equi,dirc',
-#     'loss.sigma': '1.25e-1,1e-1',
+#     'sample.scheme_t': 'simp',
+#     'loss.sigma': '7e-2',
 #     'sample.bs_t': '256',
 #     'sample.bs_n': '256',
-#     'unet.width': '64,85',
 #     'x64': 'True',
-#     'test.save_sol': 'False'
+#     'test.save_sol': 'True'
 
 # }
 
 
 # SWEEP = {
 #     'problem': 'v62',
-#     'optimizer.iters': '25_000,50_000',  # ,50_000',
-#     'loss.loss_fn': 'fd',
+#     'optimizer.iters': '10_000,12_000,15_000,20_000,25_000',  # ,50_000',
+#     'loss.loss_fn': 'ov',
 #     'seed': '1',
-#     'sample.scheme_t': 'rand,equi',
-#     'loss.sigma': '1e-3,1e-4,0.0',
-#     'sample.bs_t': '240',
+#     'sample.scheme_t': 'simp',
+#     'loss.sigma': '0.0',
+#     'sample.bs_t': '256',
 #     'sample.bs_n': '256',
 #     'unet.width': '64',
 #     'x64': 'True',
-#     'test.save_sol': 'False',
-#     'data.t_end': '6,8,10',
-
+#     'test.save_sol': 'True',
+#     'data.t_end': '6',
 # }
 
 
@@ -61,23 +59,24 @@ from hflow.misc.misc import epoch_time, unique_id
 
 SWEEP = {
     'problem': 'lin',
+    'unet.model': 'colora,film,mlp',
     'optimizer.iters': '10_000',  # ,50_000',
     'loss.loss_fn': 'ov',
-    'seed': '4,5',
-    'sample.scheme_t': 'trap,simp,rand,gauss',
+    'seed': '1,2,3,4,5,6',
+    'sample.scheme_t': 'simp',
     # 'sample.scheme_w': 'dist',
     'x64': 'True',
     'loss.sigma': '1e-2',
     'test.save_sol': 'False',
-    'data.omega': '2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 18.0'
+    'data.omega': '8.0'
     
 }
 
 
 SLURM_CONFIG = {
-    'timeout_min': 30,
+    'timeout_min': 60,
     'cpus_per_task': 4,
-    'mem_gb': 100,
+    'mem_gb': 255,
     # 'gpus_per_node': 1,
     'gres': 'gpu:h100:1',
     'account': 'extremedata'
@@ -286,7 +285,7 @@ mdyn_config = Config(problem='mdyn',
                      test=Test(plot_particles=True, wass=True))
 
 lz9_config = Config(problem='lz9',
-                    data=Data(t_end=20, n_samples=10_000, dt=1e-2),
+                    data=Data(t_end=20, n_samples=25_000, dt=1e-2),
                     loss=Loss(sigma=1e-1),
                     test=Test(plot_particles=True, wass=True, mean=True, n_samples=25_000, t_samples=32))
 
