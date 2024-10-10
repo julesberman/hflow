@@ -44,22 +44,3 @@ def get_2d_lin(mu):
         return jnp.asarray([0, 0, 1, 1])*5e-2
 
     return drift, diffusion
-
-def get_ic_van(key):
-    mu_0 = jnp.asarray([0, 1])
-    ic = jax.random.normal(key, (2,))
-    ic = (ic*0.5) - mu_0
-    return ic
-
-
-def get_2d_van(mu):
-    def drift(t, y, *args):
-        x1, x2 = y
-        x1_dot = x2
-        x2_dot = mu*(1-x1**2)*x2-x1
-        return jnp.asarray([x1_dot, x2_dot])
-
-    def diffusion(t, y, *args):
-        return jnp.asarray([0, 1])*0.5
-
-    return drift, diffusion

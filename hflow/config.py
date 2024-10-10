@@ -94,7 +94,6 @@ class Network:
     full: bool = True
     bias: bool = True
     last_activation: Union[str, None] = 'none'
-    w0: float = 8.0
     w_init: str = 'lecun'
     fix_u: Union[bool, None] = None
 
@@ -117,23 +116,17 @@ class Data:
     save: bool = False
     load: bool = False
     dim: Union[int, None] = None
-    omega: float = 4.0
+    omega: float = 8.0
 
 
 @dataclass
 class Loss:
     loss_fn: str = 'ov'
-    noise: float = 0.0
     sigma: float = 1e-1
     log: bool = False
     trace: str = 'normal'
     L: int = 10
     T: int = 100
-    t_batches: int = 1
-    n_batches: int = 1
-    impl: int = 1
-
-
 
 @dataclass
 class Sample:
@@ -187,7 +180,8 @@ class Config:
     # output_dir: str = './results/${hydra.job.name}'  # where to save results, if None nothing is saved
 
     seed: int = 1
-    debug_nans: bool = False  # weather to debug nans
+    debug_nans: bool = False  # whether to debug nans
+    advanced_flags: bool = True # set advanced flags https://jax.readthedocs.io/en/latest/gpu_performance_tips.html#nccl-flags
     # optional info about details of the experiment
     info: Union[str, None] = None
 
@@ -258,27 +252,24 @@ hydra_config = {
 cs = ConfigStore.instance()
 cs.store(name="default", node=Config)
 
-vlasov_config = Config(problem='vtwo',
+two_config = Config(problem='vtwo',
                        loss=Loss(sigma=1e-2),
                        data=Data(t_end=40, n_samples=25_000, dt=1e-2),
                        test=Test(plot_hist=True, electric=True, wass=True, n_samples=25_000))
 
+bump_config = Config(problem='vbump',
+                       loss=Loss(sigma=1e-2),
+                       data=Data(t_end=40, n_samples=25_000, dt=1e-2),
+                       test=Test(plot_hist=True, electric=True, wass=True, n_samples=25_000))
 
 bi_config = Config(problem='bi',
                     data=Data(t_end=12, dt=5e-3, n_samples=25_000),
                     test=Test(plot_particles=True, mean=True, wass=True))
 
-
 trap_config = Config(problem='trap',
                      data=Data(t_end=2, dim=100, n_samples=5000, dt=7.5e-3),
                      sample=Sample(bs_n=256, bs_t=256),
                      test=Test(plot_particles=True, mean=True))
-
-trap2_config = Config(problem='trap2',
-                      loss=Loss(sigma=1e-2),
-                      data=Data(t_end=1, dim=100, n_samples=5000, dt=4e-3),
-                      sample=Sample(bs_n=256, bs_t=256),
-                      test=Test(plot_particles=True, mean=True))
 
 mdyn_config = Config(problem='mdyn',
                      data=Data(t_end=1, dim=2, n_samples=10_000, dt=2e-3),
@@ -289,22 +280,23 @@ lz9_config = Config(problem='lz9',
                     loss=Loss(sigma=1e-1),
                     test=Test(plot_particles=True, wass=True, mean=True, n_samples=25_000, t_samples=32))
 
-
 v6_config = Config(problem='v6',
                    loss=Loss(sigma=5e-2),
                    data=Data(n_samples=25_000, t_end=6),
                    test=Test(plot_hist=True, wass=True, n_samples=25_000, electric=True))
 
 lin_config = Config(problem='lin',
-                    data=Data(t_end=1, dt=1e-3, n_samples=10_000),
+                    data=Data(t_end=1, dt=2e-3, n_samples=10_000, omega=8.0),
+                    optimizer=Optimizer(iters=10_000),
+                    loss=Loss(sigma=1e-2),
                     test=Test(plot_particles=True, mean=True, wass=True, analytic=True))
 
 
 cs.store(name="lz9", node=lz9_config)
 cs.store(name="mdyn", node=mdyn_config)
 cs.store(name="trap", node=trap_config)
-cs.store(name="trap2", node=trap2_config)
 cs.store(name="bi", node=bi_config)
-cs.store(name="vlasov", node=vlasov_config)
+cs.store(name="vtwo", node=two_config)
+cs.store(name="vbump", node=bump_config)
 cs.store(name="v6", node=v6_config)
 cs.store(name="lin", node=lin_config)

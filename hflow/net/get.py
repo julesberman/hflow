@@ -14,7 +14,7 @@ def get_network(cfg: Config, data, key):
     MT = mu.shape[-1] + 1
     M, T, N, D = sols.shape
 
-    if cfg.loss.loss_fn == 'ov' or cfg.loss.loss_fn == 'fd':
+    if 'ov' in cfg.loss.loss_fn or cfg.loss.loss_fn == 'dice':
         x_dim = D
         mu_t_dim = MT
         out_dim = 1
@@ -29,7 +29,6 @@ def get_network(cfg: Config, data, key):
                 'layers': unet.layers,
                 'activation': unet.activation,
                 'last_activation': unet.last_activation,
-                'w0': unet.w0,
                 'bias': unet.bias,
                 'period': period,
                 'w_init': unet.w_init,
@@ -39,7 +38,6 @@ def get_network(cfg: Config, data, key):
                 'layers': hnet.layers,
                 'activation': hnet.activation,
                 'last_activation': hnet.last_activation,
-                'w0': hnet.w0,
                 'bias': hnet.bias,
                 'w_init': hnet.w_init, }
 

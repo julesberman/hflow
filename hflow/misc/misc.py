@@ -59,13 +59,6 @@ def count_params(tree):
     return param_count
 
 
-def gauss_quadrature_weights_points(n, a=0, b=1):
-    points, weights = roots_legendre(n)
-    points = 0.5 * (points + 1) * (b - a) + a
-    weights = weights * 0.5 * (b - a)
-    return points, weights
-
-
 def pts_array_from_space(space):
     m_grids = jnp.meshgrid(*space,  indexing='ij')
     x_pts = jnp.asarray([m.flatten() for m in m_grids]).T

@@ -12,62 +12,8 @@ import hflow.io.result as R
 from hflow.config import Sample
 from hflow.io.utils import log
 from hflow.misc.jax import get_rand_idx
-from hflow.misc.misc import (gauss_quadrature_weights_points,
-                             pts_array_from_space)
-
-def get_simpsons(N):
-    if (N - 1) % 2 != 0:
-            raise ValueError("Number of intervals N - 1 must be even for Simpson's rule (N must be odd).")
-
-    # Generate N equispaced points on [0,1]
-    points = np.linspace(0, 1, N)
-    h = 1 / (N - 1)  # Step size
-
-    # Initialize weights
-    weights = np.zeros(N)
-    weights[0] = h / 3
-    weights[-1] = h / 3
-
-    # Apply Simpson's coefficients
-    for i in range(1, N - 1):
-        if i % 2 == 0:
-            weights[i] = 2 * h / 3
-        else:
-            weights[i] = 4 * h / 3
-
-    points = jnp.asarray(points)
-    weights = jnp.asarray(weights)
-
-    return points, weights
-
-
-def get_simpsons_38(N):
-
-    if (N - 1) % 3 != 0:
-        raise ValueError("Number of intervals N - 1 must be a multiple of 3 for Simpson's 3/8 rule.")
-
-    points = np.linspace(0, 1, N)
-    h = 1 / (N - 1)  # Step size
-
-    # Initialize weights
-    weights = np.zeros(N)
-    num_groups = (N - 1) // 3
-
-    for group in range(num_groups):
-        idx_start = group * 3
-        idx_end = idx_start + 3  # Include idx_end in the group
-
-        # Assign weights according to Simpson's 3/8 rule
-        weights[idx_start] += 3 * h / 8
-        weights[idx_start + 1] += 9 * h / 8
-        weights[idx_start + 2] += 9 * h / 8
-        weights[idx_start + 3] += 3 * h / 8
-
-    points = jnp.asarray(points)
-    weights = jnp.asarray(weights)
-
-    return points, weights
-
+from hflow.misc.misc import pts_array_from_space
+from hflow.train.quad import get_gauss, get_simpsons, get_simpsons_38, arcsin_indices
 
 def get_arg_fn(sample_cfg: Sample, data):
     log.info("gettings samples...")
@@ -101,7 +47,7 @@ def get_arg_fn(sample_cfg: Sample, data):
         return args_fn
     
     if sample_cfg.scheme_t == 'gauss':
-        g_pts_01, quad_weights = gauss_quadrature_weights_points(
+        g_pts_01, quad_weights = get_gauss(
             bs_t, a=0.0, b=1.0)
         start, end = jnp.asarray([0]), jnp.asarray([1.0])
         times =  g_pts_01
@@ -144,9 +90,6 @@ def get_arg_fn(sample_cfg: Sample, data):
         sols = np.asarray(new_sols)
         t_data = g_pts_01
 
-    # if sample_cfg.scheme_t == 'arcsin':
-    #     w_scheme = 'dist'
-
     log.info(f'sample shape {sols.shape}')
     args_fn = get_data_fn(sols, mu_data, t_data, quad_weights,
                           bs_n, bs_t, sample_cfg.scheme_t, sample_cfg.scheme_n, w_scheme)
@@ -162,7 +105,7 @@ def get_data_fn(sols, mu_data, t_data, quad_weights, bs_n, bs_t, scheme_t, schem
     mu_data = jnp.asarray(mu_data)
     t_data = jnp.asarray(t_data)
 
-    def args_fn(key, percent):
+    def args_fn(key):
 
         nonlocal sols
         nonlocal t_data
@@ -231,21 +174,6 @@ def interplate_in_t(sols, true_t, interp_t):
 
     interp_sols = rearrange(interp_sols, '(T N D) -> T N D', N=N, D=D)
     return interp_sols
-
-def dirichlet_indices(key, n_samples, N_index, alpha):
-    alphas = jnp.ones(n_samples + 1) * alpha
-    spacings = jax.random.dirichlet(key, alphas)
-    cumulative = jnp.cumsum(spacings)
-    points = cumulative[:-1]
-    indices = jnp.asarray(jnp.round(points*N_index,0), dtype=jnp.int32)
-    return indices
-
-
-def arcsin_indices(key, n_samples, N_index):
-    alpha, beta = 0.5, 0.5
-    points = jax.random.beta(key, alpha, beta, shape=(n_samples,))
-    indices = jnp.asarray(jnp.round(points*N_index,0), dtype=jnp.int32)
-    return indices
 
 
 

@@ -52,9 +52,8 @@ def adam_opt(theta_init, loss_fn, args_fn, init_state=None, steps=1000, learning
         if key is not None:
             key, skey, akey = jax.random.split(key, num=3)
 
-        percent = i/steps
         if callable(args_fn):
-            args = args_fn(akey, percent)
+            args = args_fn(akey)
         else:
             args = args_fn
 

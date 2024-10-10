@@ -22,8 +22,8 @@ Lastly ensure that jax is installed with the appropriate CPU or GPU support depe
 
 NOTE make sure that if you install jax with GPU and cuda support that you still fix the versions of jax and jaxlib at the following:
 ```
-jax==0.4.23
-jaxlib==0.4.23
+jax==0.4.34
+jaxlib==0.4.34
 ```
 
 ## Running single job
@@ -31,11 +31,10 @@ jaxlib==0.4.23
 Run a problem with problem specific default settings (recommended)
 ```
 python hflow/run.py -cn=lz9
-python hflow/run.py -cn=trap
+python hflow/run.py -cn=lin
 python hflow/run.py -cn=mdyn
-python hflow/run.py -cn=osc problem=bi
-python hflow/run.py -cn=vlasov problem=vtwo
-python hflow/run.py -cn=vlasov problem=vbump
+python hflow/run.py -cn=vtwo
+python hflow/run.py -cn=vbump 
 python hflow/run.py -cn=v6
 ```
 
@@ -65,9 +64,9 @@ SLURM_CONFIG = {
 ```
 The run the command using `--multirun` flag:
 ```
-python hflow/run.py --multirun -cn=osc problem=bi
-python hflow/run.py --multirun -cn=vlasov problem=vtwo
-python hflow/run.py --multirun -cn=vlasov problem=vbump
+python hflow/run.py --multirun -cn=osc
+python hflow/run.py --multirun -cn=vtwo
+python hflow/run.py --multirun -cn=vbump 
 python hflow/run.py --multirun -cn=trap
 python hflow/run.py --multirun -cn=lz9 name=study_sigma
 python hflow/run.py --multirun -cn=v6

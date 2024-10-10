@@ -13,10 +13,10 @@ import hflow.io.result as R
 from hflow.config import Data
 from hflow.data.lorenz9 import get_ic_lorenz9d, get_lorenz9d
 from hflow.data.mdyn import get_mdyn_sol
-from hflow.data.particles import (get_2d_bi, get_2d_lin, get_2d_van, get_ic_bi,
-                                  get_ic_lin, get_ic_van)
+from hflow.data.particles import (get_2d_bi, get_2d_lin, get_ic_bi,
+                                  get_ic_lin)
 from hflow.data.sde import solve_sde
-from hflow.data.trap import get_ic_trap, get_ic_trap2, get_trap, get_trap2
+from hflow.data.trap import get_ic_trap, get_trap
 from hflow.data.utils import normalize
 from hflow.data.vlasov import run_vlasov
 from hflow.io.utils import log, save_pickle
@@ -65,20 +65,7 @@ def get_data(problem, data_cfg: Data, key):
             R.RESULT[f'FOM_integrate_time_{mu_i}'] = end-start
             sols.append(res)
         sols = np.asarray(sols)
-
-    elif problem == 'vtwo2':
-        train_mus = np.asarray([0.85, 1.0, 1.3, 1.45, 1.6, 1.75, 2.05, 2.2])
-        test_mus = np.asarray([1.15, 1.9])
-        mus = np.concatenate([train_mus, test_mus])
-        for mu_i, mu in enumerate(mus):
-            start = time.time()
-            res = run_vlasov(n_samples, t_eval, mu, mode='two-stream')
-            end = time.time()
-            R.RESULT[f'FOM_integrate_time_{mu_i}'] = end-start
-            sols.append(res)
-        sols = np.asarray(sols)
     elif problem == 'lz9':
-
         train_mus = np.asarray(
             [13.5, 13.6, 13.7, 13.8, 13.9, 14.0, 14.1, 14.2])
         test_mus = np.asarray([13.65, 14.05])
@@ -118,14 +105,6 @@ def get_data(problem, data_cfg: Data, key):
         sols = rearrange(sols, 'M N T D -> M T N D')
         sols = sols[:, :, :, :2]
         
-    elif problem == 'van':
-        mus = np.asarray([0.0, 0.5, 1.0, 1.5, 2.0])
-
-        def solve_for_mu(mu):
-            drift, diffusion = get_2d_van(mu)
-            return solve_sde(drift, diffusion, t_eval, get_ic_van, n_samples, dt=data_cfg.dt, key=key)
-        sols = vmap(jit(solve_for_mu))(mus)
-        sols = rearrange(sols, 'M N T D -> M T N D')
     elif problem == 'trap':
         train_mus = np.asarray([0.3, 0.4, 0.5, 0.7, 0.8, 0.9])
         test_mus = np.asarray([0.6])
@@ -133,22 +112,6 @@ def get_data(problem, data_cfg: Data, key):
         system_dim = data_cfg.dim
         trap = partial(get_trap, system_dim)
         trap_ic = partial(get_ic_trap, system_dim)
-
-        def solve_for_mu(mu):
-            drift, diffusion = trap(mu)
-            return solve_sde(drift, diffusion, t_eval, trap_ic, n_samples, dt=data_cfg.dt, key=key)
-        for mu in mus:
-            res = solve_for_mu(mu)
-            sols.append(res)
-        sols = np.asarray(sols)
-        sols = rearrange(sols, 'M N T D -> M T N D')
-    elif problem == 'trap2':
-        train_mus = np.asarray([1.0, 1.25, 1.75, 2.0, 2.25, 2.75, 3.0])
-        test_mus = np.asarray([1.5, 2.5])
-        mus = np.concatenate([train_mus, test_mus])
-        system_dim = data_cfg.dim
-        trap = partial(get_trap2, system_dim)
-        trap_ic = partial(get_ic_trap2, system_dim)
 
         def solve_for_mu(mu):
             drift, diffusion = trap(mu)
@@ -174,33 +137,6 @@ def get_data(problem, data_cfg: Data, key):
 
     elif problem == "v6":
         mus = []
-        for i in range(0, 7):
-            sol, mu, t_grid, wall_time = read_from_hdf5(
-                "strongLandauDamping" + f"{i:02d}", n_samples)
-            R.RESULT[f'FOM_integrate_time_{i}'] = wall_time
-            mus.append(mu)
-            sols.append(sol)
-        sols = np.asarray(sols)
-        mus = np.asarray(mus)
-        idx = np.argsort(mus)
-        mus = mus[idx]
-        sols = sols[idx]
-        train_idx = np.asarray([0, 1, 3, 5, 6])
-        test_idx = np.asarray([2, 4])
-        train_mus = mus[train_idx]
-        test_mus = mus[test_idx]
-
-        t_eval = t_grid
-        sols = sols[:, :-1]  # bug sol is too big
-        T = sols.shape[1]//data_cfg.t_end
-        T = int(T)
-        print(T)
-        sols = sols[:, :T]
-        t_eval = t_eval[:T]
-        print(T, t_eval)
-
-    elif problem == "v62":
-        mus = []
         for i in range(0, 11):
             sol, mu, t_grid, wall_time = read_from_hdf5(
                 "strongLandauDampingCV" + f"{i:02d}", n_samples)
@@ -221,11 +157,11 @@ def get_data(problem, data_cfg: Data, key):
         sols = sols[:, :-1]  # bug sol is too big
         T = sols.shape[1]//data_cfg.t_end
         T = int(T)
-        # print(T)
+
         sols = sols[:, :T]
         t_eval = t_eval[:T]
-        # print(T, t_eval)
-        # lets do half
+
+        
     R.RESULT['train_mus_raw'] = train_mus
     R.RESULT['test_mus_raw'] = test_mus
 
@@ -257,9 +193,6 @@ def get_data(problem, data_cfg: Data, key):
     R.RESULT['test_mus'] = test_mus
 
     log.info(f'mus_norm: {np.round(np.squeeze(mus),4)}')
-
-    # R.RESULT['train_sols'] = train_sols
-    # R.RESULT['test_sols'] = test_sols
 
     train_data = (train_sols, train_mus, t_eval)
     test_data = (test_sols, test_mus, t_eval)

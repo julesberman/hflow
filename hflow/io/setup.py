@@ -6,7 +6,7 @@ import secrets
 import jax
 import numpy as np
 from jax.lib.xla_bridge import get_backend
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import OmegaConf
 
 import hflow.io.result as R
 from hflow.config import Config
@@ -49,15 +49,18 @@ def setup(config: Config):
     log.info(
         f'platform: {get_backend().platform} — device_count: {jax.local_device_count()}')
 
-    # Get the list of available devices (CPUs, GPUs, TPUs)
+    # list of available devices (CPUs, GPUs, TPUs)
     devices = jax.devices()
+    for gpu in devices:
+        log.info(f"host_{gpu.id}: {gpu.device_kind}")
+        R.RESULT[f'host_{gpu.id}'] = gpu.device_kind
 
-    # Iterate through the devices and print details if it's a GPU
-    for device in devices:
-        if device.device_kind == "Gpu":
-            log.info(f"Device name: {device.device_kind}")
-            log.info(f"Device memory: {device.memory_amount / 1e9} GB")
-            log.info(f"Device specs: {device}")
+    if config.advanced_flags:
+        os.environ.update({
+        "NCCL_LL128_BUFFSIZE": "-2",
+        "NCCL_LL_BUFFSIZE": "-2",
+        "NCCL_PROTO": "SIMPLE,LL,LL128",
+        })
 
     # set random seed, if none use random random seed
     if config.seed == -1:

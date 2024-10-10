@@ -10,8 +10,6 @@ from jax.flatten_util import ravel_pytree
 def train_model(opt_cfg: Optimizer, arg_fn, loss_fn, psi_theta_init, key):
 
     iters = opt_cfg.iters
-    # log.info(
-    #     f'adam_opt for n_batches: {n_batches}, iters {iters}, epochs: {epochs}, batch_size: {bs}')
 
     if opt_cfg.optimizer == 'lbfgs':
         def loss_wrap(params):

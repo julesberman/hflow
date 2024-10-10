@@ -10,6 +10,7 @@ ground_truth
 .vscode
 .ipynb_checkpoints
 .zshrc
+.bashrc
 qsubs
 
 ###################

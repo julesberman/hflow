@@ -7,4 +7,5 @@ setup(
     version='0.0.1',
     description="",
     license="MIT",
+    packages=['hflow'], 
 )
