@@ -13,7 +13,7 @@ from hflow.config import Sample
 from hflow.io.utils import log
 from hflow.misc.jax import get_rand_idx
 from hflow.misc.misc import pts_array_from_space
-from hflow.train.quad import get_gauss, get_simpsons, get_simpsons_38, arcsin_indices
+from hflow.train.quad import get_gauss, get_simpsons, get_simpsons_38
 
 def get_arg_fn(sample_cfg: Sample, data):
     log.info("gettings samples...")
@@ -81,7 +81,7 @@ def get_arg_fn(sample_cfg: Sample, data):
 
 
 
-    if sample_cfg.scheme_t != 'rand' and sample_cfg.scheme_t != 'arcsin':
+    if sample_cfg.scheme_t != 'rand':
         new_sols = []
         for i, sol_mu in enumerate(sols):
             ss = interplate_in_t(sol_mu, t_data, g_pts_01)
@@ -120,13 +120,6 @@ def get_data_fn(sols, mu_data, t_data, quad_weights, bs_n, bs_t, scheme_t, schem
 
         if scheme_t == 'rand':
             t_idx = jax.random.choice(keyt, T-1, shape=(bs_t,), replace=False)
-            start, end = jnp.asarray([0]), jnp.asarray([T-1])
-            t_idx = jnp.concatenate([start, t_idx, end])
-            t_idx = jnp.sort(t_idx)
-            t_sample = t_data[t_idx]
-            sols_sample = sols_sample[t_idx]
-        elif scheme_t == 'arcsin':
-            t_idx = arcsin_indices(key, bs_t, T-1)
             start, end = jnp.asarray([0]), jnp.asarray([T-1])
             t_idx = jnp.concatenate([start, t_idx, end])
             t_idx = jnp.sort(t_idx)

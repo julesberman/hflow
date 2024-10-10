@@ -64,7 +64,6 @@ SWEEP = {
     'loss.loss_fn': 'ov',
     'seed': '1,2,3,4,5,6',
     'sample.scheme_t': 'simp',
-    # 'sample.scheme_w': 'dist',
     'x64': 'True',
     'loss.sigma': '1e-2',
     'test.save_sol': 'False',
@@ -78,7 +77,7 @@ SLURM_CONFIG = {
     'cpus_per_task': 4,
     'mem_gb': 255,
     # 'gpus_per_node': 1,
-    'gres': 'gpu:h100:1',
+    'gres': 'gpu:h100',
     'account': 'extremedata'
 }
 

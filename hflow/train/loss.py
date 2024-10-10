@@ -19,7 +19,7 @@ def get_loss_fn(loss_cfg: Loss, sample_cfg: Sample, s_fn):
         loss_fn = OV_Loss_old(
             s_fn, sigma=loss_cfg.sigma, trace=loss_cfg.trace)
     elif loss_cfg.loss_fn == 'dice':
-        loss_fn = DICE_Loss(s_fn, sigma=loss_cfg.sigma, trace=loss_cfg.trace, impl=loss_cfg.impl)  
+        loss_fn = DICE_Loss(s_fn, sigma=loss_cfg.sigma, trace=loss_cfg.trace)  
     elif loss_cfg.loss_fn == 'ncsm':
         sigmas = generate_sigmas(loss_cfg.L)
         loss_fn = NCSM_Loss(s_fn, sigmas)

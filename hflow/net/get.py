@@ -14,7 +14,7 @@ def get_network(cfg: Config, data, key):
     MT = mu.shape[-1] + 1
     M, T, N, D = sols.shape
 
-    if 'ov' in cfg.loss.loss_fn or cfg.loss.loss_fn == 'dice':
+    if cfg.loss.loss_fn == 'ov' or cfg.loss.loss_fn == 'fd':
         x_dim = D
         mu_t_dim = MT
         out_dim = 1

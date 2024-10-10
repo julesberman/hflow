@@ -46,7 +46,7 @@ def test_model(cfg: Config, data, s_fn, opt_params, key):
         true_sol = sol[mu_i]
 
         start = time.time()
-        if 'ov' in cfg.loss.loss_fn or cfg.loss.loss_fn == 'dice':
+        if cfg.loss.loss_fn == 'ov' or cfg.loss.loss_fn == 'fd':
             test_sol = solve_test_sde(s_fn, opt_params, ics[mu_i], t_int,
                                       test_cfg.dt, sigma, mus[mu_i], key)
         elif cfg.loss.loss_fn == 'ncsm':
@@ -130,7 +130,8 @@ def solve_test_sde(s_fn, params, ics, t_int, dt, sigma, mu, key):
     s_dx = jacrev(s_fn, 1)
 
     def drift(t, y, *args):
-        mu_t = jnp.concatenate([mu, t.reshape(1)])
+        t = jnp.asarray([t]).reshape(1)
+        mu_t = jnp.concatenate([mu, t])
         f = jnp.squeeze(s_dx(mu_t, y, params))
         return f
 
