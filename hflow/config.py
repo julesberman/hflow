@@ -62,9 +62,9 @@ SWEEP = {
     'unet.model': 'colora,film,mlp',
     'optimizer.iters': '10_000',  # ,50_000',
     'loss.loss_fn': 'ov',
-    'seed': '1,2,3,4,5,6',
-    'sample.scheme_t': 'simp',
-    'x64': 'True',
+    'seed': '1,2,3,4,5',
+    'sample.scheme_t': 'gauss',
+    'x64': 'False',
     'loss.sigma': '1e-2',
     'test.save_sol': 'False',
     'data.omega': '8.0'
@@ -73,12 +73,12 @@ SWEEP = {
 
 
 SLURM_CONFIG = {
-    'timeout_min': 60,
+    'timeout_min': 60*2,
     'cpus_per_task': 4,
-    'mem_gb': 255,
+    'mem_gb': 200,
     # 'gpus_per_node': 1,
-    'gres': 'gpu:h100',
-    'account': 'extremedata'
+    'gres': 'gpu',
+    # 'account': 'extremedata'
 }
 
 
@@ -252,12 +252,12 @@ cs = ConfigStore.instance()
 cs.store(name="default", node=Config)
 
 two_config = Config(problem='vtwo',
-                       loss=Loss(sigma=1e-2),
+                       loss=Loss(sigma=5e-2),
                        data=Data(t_end=40, n_samples=25_000, dt=1e-2),
                        test=Test(plot_hist=True, electric=True, wass=True, n_samples=25_000))
 
 bump_config = Config(problem='vbump',
-                       loss=Loss(sigma=1e-2),
+                       loss=Loss(sigma=5e-2),
                        data=Data(t_end=40, n_samples=25_000, dt=1e-2),
                        test=Test(plot_hist=True, electric=True, wass=True, n_samples=25_000))
 

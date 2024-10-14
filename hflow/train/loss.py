@@ -108,9 +108,8 @@ def OV_Loss(s_combine, sigma=0.0):
     dt_Ex_Vt = vmap(dt_Ex, in_axes=(None, 0, 0, None))
 
     laplace = tracewrap(jacfwd(s_dx, 1))
-    laplace_norm = lambda *args: jnp.sum(laplace(*args)**2)
-    laplace_norm_Ex = meanvmap(laplace_norm, in_axes=(None, 0, None, None))
-    laplace_norm_Ex_Vt = vmap(laplace_norm_Ex, in_axes=(None, 0, 0, None))
+    laplace_Ex = meanvmap(laplace, in_axes=(None, 0, None, None))
+    laplace_Ex_Vt = vmap(laplace_Ex, in_axes=(None, 0, 0, None))
 
     epsilon = sigma
 
@@ -125,7 +124,7 @@ def OV_Loss(s_combine, sigma=0.0):
         dt = jnp.squeeze(dt)
         
         if epsilon > 0.0:
-            lap = laplace_norm_Ex_Vt(mu, X_batch, t_batch, params)
+            lap = laplace_Ex_Vt(mu, X_batch, t_batch, params)
         else:
             lap = 0.0
         
