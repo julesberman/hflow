@@ -8,19 +8,17 @@ from omegaconf import OmegaConf
 
 from hflow.misc.misc import epoch_time, unique_id
 
-# SWEEP = {
-#     'problem': 'vtwo',
-#     'optimizer.iters': '25_000,50_000',  # ,50_000',
-#     'loss.loss_fn': 'ov',
-#     'seed': '1',
-#     'sample.scheme_t': 'gauss',
-#     'loss.sigma': '1e-1,5e-2,1e-2,0.0',
-#     'sample.bs_t': '256',
-#     'sample.bs_n': '256',
-#     'x64': 'True',
-#     'test.save_sol': 'True'
-
-# }
+SWEEP = {
+    'problem': 'vtwo',
+    'optimizer.iters': '25_000',  # ,50_000',
+    'loss.loss_fn': 'ov, ov_old',
+    'seed': '1,2,3',
+    'sample.scheme_t': 'simp',
+    'loss.sigma': '5e-2',
+    'sample.bs_t': '256',
+    'sample.bs_n': '256',
+    'x64': 'False,True',
+}
 
 
 
@@ -57,19 +55,18 @@ from hflow.misc.misc import epoch_time, unique_id
 
 
 
-SWEEP = {
-    'problem': 'lin',
-    'unet.model': 'colora,film,mlp',
-    'optimizer.iters': '10_000',  # ,50_000',
-    'loss.loss_fn': 'ov',
-    'seed': '1,2,3,4,5',
-    'sample.scheme_t': 'gauss',
-    'x64': 'False',
-    'loss.sigma': '1e-2',
-    'test.save_sol': 'False',
-    'data.omega': '8.0'
-    
-}
+# SWEEP = {
+#     'problem': 'lin',
+#     'unet.model': 'colora,film,mlp',
+#     'optimizer.iters': '10_000',  # ,50_000',
+#     'loss.loss_fn': 'ov_old',
+#     'seed': '1,2,3,4,5',
+#     'sample.scheme_t': 'gauss,simp',
+#     'x64': 'False',
+#     'loss.sigma': '5e-2,1e-2',
+#     'test.save_sol': 'False',
+#     'data.omega': '8.0'
+# }
 
 
 SLURM_CONFIG = {

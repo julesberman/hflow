@@ -49,7 +49,6 @@ Calculate the acceleration on each particle due to electric field
 
     # Solve Poisson's Equation: laplacian(phi) = n-n0
     phi_grid = spsolve(Lmtx, n_eff, permc_spec="MMD_AT_PLUS_A")
-    phi_grid = spsolve(Lmtx, n_eff, permc_spec="MMD_AT_PLUS_A")
 
     # Apply Derivative to get the Electric field
     E_grid = - Gmtx @ phi_grid
