@@ -12,6 +12,7 @@ ground_truth
 .zshrc
 .bashrc
 qsubs
+envhoam
 
 ###################
 # PYTHON DEFAULTS #

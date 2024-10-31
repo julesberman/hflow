@@ -15,6 +15,7 @@ from scipy.linalg import sqrtm
 from hydra.core.hydra_config import HydraConfig
 from hflow.config import Config
 
+
 def get_cov_diag(A):
     return jnp.diag(jnp.cov(A, rowvar=False))
 
@@ -25,13 +26,14 @@ def compute_metrics(cfg: Config, test_cfg: Test, true_sol, test_sol, mu_i):
     true_sol = true_sol[1:]
     test_sol = test_sol[1:]
 
-    (d_shift, d_scale) = R.RESULT['data_norm']
+    (d_shift, d_scale) = R.RESULT["data_norm"]
     if cfg.data.normalize:
         d_shift, d_scale = d_shift[0], d_scale[0]
-        true_sol = (true_sol*d_scale)+d_shift
-        test_sol = (test_sol*d_scale)+d_shift
+        true_sol = (true_sol * d_scale) + d_shift
+        test_sol = (test_sol * d_scale) + d_shift
 
     if test_cfg.mean:
+
         def get_metric(sol):
             mm = np.mean(sol, axis=(1,))
             cov = vmap(get_cov_diag)(sol)
@@ -40,34 +42,35 @@ def compute_metrics(cfg: Config, test_cfg: Test, true_sol, test_sol, mu_i):
         true_m, true_cov = get_metric(true_sol)
         test_m, test_cov = get_metric(test_sol)
 
-        R.RESULT[f'full_mean_true_{mu_i}'] = true_m
-        R.RESULT[f'full_cov_true_{mu_i}'] = true_cov
-        R.RESULT[f'full_mean_test_{mu_i}'] = test_m
-        R.RESULT[f'full_cov_test_{mu_i}'] = test_cov
+        R.RESULT[f"full_mean_true_{mu_i}"] = true_m
+        R.RESULT[f"full_cov_true_{mu_i}"] = true_cov
+        R.RESULT[f"full_mean_test_{mu_i}"] = test_m
+        R.RESULT[f"full_cov_test_{mu_i}"] = test_cov
 
-        time_err_m = np.linalg.norm(
-            true_m - test_m, axis=(-1)) / np.linalg.norm(true_m, axis=(-1))
-        time_err_cov = np.linalg.norm(
-            true_cov - test_cov, axis=(-1)) / np.linalg.norm(true_cov, axis=(-1))
+        time_err_m = np.linalg.norm(true_m - test_m, axis=(-1)) / np.linalg.norm(
+            true_m, axis=(-1)
+        )
+        time_err_cov = np.linalg.norm(true_cov - test_cov, axis=(-1)) / np.linalg.norm(
+            true_cov, axis=(-1)
+        )
 
-        R.RESULT[f'time_mean_err_{mu_i}'] = time_err_m
-        R.RESULT[f'time_cov_err_{mu_i}'] = time_err_cov
+        R.RESULT[f"time_mean_err_{mu_i}"] = time_err_m
+        R.RESULT[f"time_cov_err_{mu_i}"] = time_err_cov
 
         mean_err = np.mean(time_err_m)
         cov_err = np.mean(time_err_cov)
 
-        R.RESULT[f'mean_mean_err_{mu_i}'] = mean_err
-        R.RESULT[f'mean_cov_err_{mu_i}'] = cov_err
+        R.RESULT[f"mean_mean_err_{mu_i}"] = mean_err
+        R.RESULT[f"mean_cov_err_{mu_i}"] = cov_err
 
         l2_mean_err = np.linalg.norm(true_m - test_m) / np.linalg.norm(true_m)
-        l2_err_cov = np.linalg.norm(
-            true_cov - test_cov) / np.linalg.norm(true_cov)
+        l2_err_cov = np.linalg.norm(true_cov - test_cov) / np.linalg.norm(true_cov)
 
-        R.RESULT[f'l2_mean_err_{mu_i}'] = l2_mean_err
-        R.RESULT[f'l2_cov_err_{mu_i}'] = l2_err_cov
+        R.RESULT[f"l2_mean_err_{mu_i}"] = l2_mean_err
+        R.RESULT[f"l2_cov_err_{mu_i}"] = l2_err_cov
 
-        log.info(f'l2_mean_err {mu_i}: {l2_mean_err:.3e}')
-        log.info(f'l2_cov_err {mu_i}: {l2_err_cov:.3e}')
+        log.info(f"l2_mean_err {mu_i}: {l2_mean_err:.3e}")
+        log.info(f"l2_cov_err {mu_i}: {l2_err_cov:.3e}")
 
     if test_cfg.electric:
 
@@ -76,66 +79,63 @@ def compute_metrics(cfg: Config, test_cfg: Test, true_sol, test_sol, mu_i):
         boxsize = 50
 
         if true_sol.shape[-1] > 2:
-            true_sol_ele = np.stack(
-                [true_sol[:, :, 0], true_sol[:, :, 3]], axis=-1)
-            test_sol_ele = np.stack(
-                [test_sol[:, :, 0], test_sol[:, :, 3]], axis=-1)
-            boxsize = 4*np.pi
+            true_sol_ele = np.stack([true_sol[:, :, 0], true_sol[:, :, 3]], axis=-1)
+            test_sol_ele = np.stack([test_sol[:, :, 0], test_sol[:, :, 3]], axis=-1)
+            boxsize = 4 * np.pi
 
         true_electric = compute_electric_energy(true_sol_ele, boxsize=boxsize)
         test_electric = compute_electric_energy(test_sol_ele, boxsize=boxsize)
-        R.RESULT[f'true_electric_{mu_i}'] = true_electric
-        R.RESULT[f'test_electric_{mu_i}'] = test_electric
+        R.RESULT[f"true_electric_{mu_i}"] = true_electric
+        R.RESULT[f"test_electric_{mu_i}"] = test_electric
 
         outdir = HydraConfig.get().runtime.output_dir
         t_int = np.linspace(0, 1, len(test_electric))
         plt.semilogy(t_int, true_electric, label="True")
         plt.semilogy(t_int, test_electric, label="Test")
         plt.xlabel("time")
-        plt.ylabel('electric energy')
-        plt.savefig(f'{outdir}/electric_{mu_i}.png')
+        plt.ylabel("electric energy")
+        plt.savefig(f"{outdir}/electric_{mu_i}.png")
         plt.clf()
 
-        err_electric = np.abs(
-            true_electric - test_electric) / np.abs(true_electric)
+        err_electric = np.abs(true_electric - test_electric) / np.abs(true_electric)
         err_electric = np.mean(err_electric)
-        R.RESULT[f'err_electric_{mu_i}'] = err_electric
-        log.info(f'err_electric_{mu_i}: {err_electric:.3e}')
+        R.RESULT[f"err_electric_{mu_i}"] = err_electric
+        log.info(f"err_electric_{mu_i}: {err_electric:.3e}")
 
     if test_cfg.wass:
-        log.info(f'computing wasserstein')
+        log.info(f"computing wasserstein")
 
         epsilon = test_cfg.w_eps
         s_time = compute_wasserstein_over_D(true_sol, test_sol, epsilon)
 
-        R.RESULT[f'time_sink_dist_{mu_i}'] = s_time
+        R.RESULT[f"time_sink_dist_{mu_i}"] = s_time
         mean_sink_dist = np.mean(s_time)
-        R.RESULT[f'mean_sink_dist_{mu_i}'] = mean_sink_dist
-        log.info(f'mean_sink_dist_{mu_i}: {mean_sink_dist:.3e}')
-
+        R.RESULT[f"mean_sink_dist_{mu_i}"] = mean_sink_dist
+        log.info(f"mean_sink_dist_{mu_i}: {mean_sink_dist:.3e}")
 
     if test_cfg.analytic:
-        if cfg.problem == 'lin':
+        if cfg.problem == "lin":
             omega = cfg.data.omega
             t_int = np.linspace(0, 1, len(test_sol))
             ms, covs = vmap(analytic_sol, (0, None))(t_int, omega)
 
             # analytic_w_dist_time = vmap(wass_dist_gauss, (0, 0, 0))(test_sol, ms, covs)
             analytic_w_dist_time = []
-            for t,m,c in zip(test_sol, ms, covs):
-                analytic_w_dist_time.append(wass_dist_gauss(t,m,c))
+            for t, m, c in zip(test_sol, ms, covs):
+                analytic_w_dist_time.append(wass_dist_gauss(t, m, c))
 
-            R.RESULT[f'time_analytic_w_dist_{mu_i}'] = analytic_w_dist_time
-            mean_aw_dist = np.mean(s_time)
-            R.RESULT[f'mean_analytic_w_dist_{mu_i}'] = mean_aw_dist
-            log.info(f'mean_analytic_w_dist_{mu_i}: {mean_aw_dist:.3e}')
+            R.RESULT[f"time_analytic_w_dist_{mu_i}"] = analytic_w_dist_time
+            mean_aw_dist = np.mean(analytic_w_dist_time)
+            R.RESULT[f"mean_analytic_w_dist_{mu_i}"] = mean_aw_dist
+            log.info(f"mean_analytic_w_dist_{mu_i}: {mean_aw_dist:.3e}")
 
 
 def analytic_sol(t, omega):
     sig_0 = 0.1
-    mean = jnp.cos(t*omega)
-    std = sig_0*jnp.cos(t*omega)
-    return mean, std**2*jnp.eye(2)
+    mean = jnp.cos(t * omega)
+    std = sig_0 * jnp.cos(t * omega)
+    return mean, std**2 * jnp.eye(2)
+
 
 def wass_dist_gauss(sample_points, gaussian_mean, gaussian_cov):
     """
@@ -189,19 +189,23 @@ def wass_dist_gauss(sample_points, gaussian_mean, gaussian_cov):
 def average_metrics(mus):
 
     # compute averages
-    metrics = ['err_electric', 'test_integrate_time', 'FOM_integrate_time', 'mean_sink_dist']
+    metrics = [
+        "err_electric",
+        "test_integrate_time",
+        "FOM_integrate_time",
+        "mean_sink_dist",
+    ]
     for metric in metrics:
         count = 0
         total = 0
         for mu_i in range(len(mus)):
-            key = f'metric_{mu_i}'
+            key = f"metric_{mu_i}"
             if key in R.RESULT:
                 total += R.RESULT[key]
                 count += 1
 
         if count > 0:
-            R.RESULT[f'{metric}_total'] = total/count
-            
+            R.RESULT[f"{metric}_total"] = total / count
 
 
 def compute_wasserstein_scipy(A, B):
@@ -221,6 +225,7 @@ def compute_wasserstein_scipy(A, B):
 def compute_wasserstein_ott(A, B, eps):
     from ott.geometry import pointcloud
     from ott.tools import sinkhorn_divergence
+
     geometry = pointcloud.PointCloud(x=A, y=B, epsilon=eps)
     result = sinkhorn_divergence.sinkhorn_divergence(geom=geometry, x=A, y=B)
     sk_div = result.divergence
@@ -240,13 +245,12 @@ def compute_wasserstein_over_D(A, B, eps):
 
 
 def compute_electric_energy(sol, boxsize=50):
-    from hflow.data.vlasov import (get_gradient_matrix, get_laplacian_matrix,
-                                   getAcc)
+    from hflow.data.vlasov import get_gradient_matrix, get_laplacian_matrix, getAcc
 
     T, Nn, D = sol.shape
     N = Nn // 8
 
-    sol = sol[:, :N*8]
+    sol = sol[:, : N * 8]
 
     sol = np.mod(sol, boxsize)
     # sol[sol == 0.0] = 1e-5
@@ -260,10 +264,11 @@ def compute_electric_energy(sol, boxsize=50):
 
     for j in range(T):
         _, phi[j, :] = np.squeeze(
-            getAcc(sol[j, :, 0][:, None], N, boxsize, 1, Gmtx, Lmtx))
+            getAcc(sol[j, :, 0][:, None], N, boxsize, 1, Gmtx, Lmtx)
+        )
 
     # calculate electric energy at all times
-    E = - 0.5 * np.mean(phi, axis=1)
+    E = -0.5 * np.mean(phi, axis=1)
 
     return E
 
