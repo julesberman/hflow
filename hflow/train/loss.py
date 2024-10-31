@@ -104,7 +104,7 @@ def DICE_Loss(s, sigma=0.0, alpha=0.0, alpha_quant=None):
                 dt = jnp.squeeze(dt)
                 reg = dt**2
             reg = reg[:-1] + reg[1:]
-            loss += jnp.sum(reg * dists)
+            loss += jnp.sum(reg * dists) * alpha
 
         return loss
 
@@ -160,7 +160,7 @@ def OV_Loss(s_combine, sigma=0.0, alpha=0.0, alpha_quant=None):
                 reg = s_Ex_Vt(mu, X_batch, t_batch, params) ** 2
             if alpha_quant == "s_t":
                 reg = dt**2
-            interior += reg
+            interior += reg * alpha
 
         if quad_weights is not None:
             interior_loss = (interior * quad_weights).sum()
