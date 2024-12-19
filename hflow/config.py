@@ -88,6 +88,7 @@ class Network:
     last_activation: Union[str, None] = "none"
     w_init: str = "lecun"
     fix_u: Union[bool, None] = None
+    homo: bool = False
 
 
 @dataclass

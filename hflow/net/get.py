@@ -17,6 +17,8 @@ def get_network(cfg: Config, data, key):
         x_dim = D
         mu_t_dim = MT
         out_dim = 1
+        if cfg.unet.homo:
+            out_dim = D
     elif (
         cfg.loss.loss_fn == "ncsm"
         or cfg.loss.loss_fn == "cfm"
@@ -105,5 +107,14 @@ def get_network(cfg: Config, data, key):
             return s_fn(t, x, params) - s_fn(t, x * 0 + 0.5, params)
 
         return s_fn_fixed, params_init
+
+    if cfg.unet.homo:
+
+        def s_fn_homo(t, x, params):
+            f_x = s_fn(t, x, params)
+            y = 0.5 * jnp.dot(x, f_x)
+            return jnp.squeeze(y)
+
+        return s_fn_homo, params_init
 
     return s_fn, params_init

@@ -1,4 +1,3 @@
-
 from typing import Callable, Optional
 
 import flax.linen as nn
@@ -20,18 +19,25 @@ class Periodic(nn.Module):
         dim, f = x.shape[-1], self.width
         w_init = self.w_init
         if self.period is None:
-            period = self.param('period', w_init,
-                                (f, dim,), self.param_dtype)
+            period = self.param(
+                "period",
+                w_init,
+                (
+                    f,
+                    dim,
+                ),
+                self.param_dtype,
+            )
         else:
             period = jnp.asarray(self.period)
 
-        a = self.param('a', w_init, (f, dim), self.param_dtype)
-        phi = self.param('c', w_init, (f, dim), self.param_dtype)
+        a = self.param("a", w_init, (f, dim), self.param_dtype)
+        phi = self.param("c", w_init, (f, dim), self.param_dtype)
 
-        omeg = jnp.pi*2/period
-        o = a*jnp.cos(omeg*x+phi)
+        omeg = jnp.pi * 2 / period
+        o = a * jnp.cos(omeg * x + phi)
         if self.use_bias:
-            b = self.param('b', w_init, (f, dim), self.param_dtype)
+            b = self.param("b", w_init, (f, dim), self.param_dtype)
             o += b
 
         o = jnp.mean(o, axis=1)
@@ -59,22 +65,22 @@ class CoLoRA(nn.Module):
         b_init = self.b_init
         z_init = initializers.zeros_init()
 
-        W = self.param('W', w_init, (D, K), self.param_dtype)
-        A = self.param('A', w_init, (D, r), self.param_dtype)
-        B = self.param('B', w_init, (r, K), self.param_dtype)
+        W = self.param("W", w_init, (D, K), self.param_dtype)
+        A = self.param("A", w_init, (D, r), self.param_dtype)
+        B = self.param("B", w_init, (r, K), self.param_dtype)
 
         if self.full:
             n_alpha = self.rank
         else:
             n_alpha = 1
 
-        alpha = self.param('alpha', z_init, (n_alpha,), self.param_dtype)
+        alpha = self.param("alpha", z_init, (n_alpha,), self.param_dtype)
 
-        AB = (A*alpha)@B
+        AB = (A * alpha) @ B
         AB = AB  # / r
-        W = (W + AB)
+        W = W + AB
 
-        out = X@W
+        out = X @ W
 
         if self.use_bias:
             b = self.param("b", b_init, (K,))
@@ -101,16 +107,16 @@ class FiLM(nn.Module):
         b_init = self.b_init
         z_init = initializers.zeros_init()
 
-        W = self.param('W', w_init, (D, K), self.param_dtype)
+        W = self.param("W", w_init, (D, K), self.param_dtype)
 
         if self.full:
             n_alpha = self.width
         else:
             n_alpha = 1
 
-        alpha = self.param('alpha', z_init, (n_alpha*2,), self.param_dtype)
+        alpha = self.param("alpha", z_init, (n_alpha * 2,), self.param_dtype)
 
-        out = X@W
+        out = X @ W
 
         if self.use_bias:
             b = self.param("b", b_init, (K,))
@@ -120,7 +126,7 @@ class FiLM(nn.Module):
         gamma, beta = alpha[:n_alpha], alpha[n_alpha:]
         gamma += 1
 
-        out = out*gamma + beta
+        out = out * gamma + beta
 
         return out
 
@@ -135,17 +141,19 @@ class Rational(nn.Module):
     Source: https://github.com/yonesuke/RationalNets/blob/main/src/rationalnets/rational.py
 
     """
+
     p = 3
 
     @nn.compact
     def __call__(self, x):
         alpha_init = lambda *args: jnp.array(
-            [1.1915, 1.5957, 0.5, 0.0218][:self.p+1])
-        beta_init = lambda *args: jnp.array([2.383, 0.0, 1.0][:self.p])
+            [1.1915, 1.5957, 0.5, 0.0218][: self.p + 1]
+        )
+        beta_init = lambda *args: jnp.array([2.383, 0.0, 1.0][: self.p])
         alpha = self.param("alpha", init_fn=alpha_init)
         beta = self.param("beta", init_fn=beta_init)
 
-        return jnp.polyval(alpha, x)/jnp.polyval(beta, x)
+        return jnp.polyval(alpha, x) / jnp.polyval(beta, x)
 
 
 class Siren(nn.Module):
@@ -175,10 +183,9 @@ class Fourier_Random(nn.Module):
         f, dim = self.features, x.shape[-1]
 
         key = jax.random.PRNGKey(1)
-        R = jax.random.truncated_normal(
-            key, upper=10, lower=-10, shape=(f, dim))
+        R = jax.random.truncated_normal(key, upper=10, lower=-10, shape=(f, dim))
         R = R * self.variance
-        fs = f//2
+        fs = f // 2
 
         s = jnp.sin(R[:fs] @ x)
         c = jnp.cos(R[fs:] @ x)

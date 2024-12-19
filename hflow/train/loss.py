@@ -7,6 +7,7 @@ from jax import grad, jacfwd, jacrev, jit, jvp, vmap
 
 from hflow.config import Loss, Sample
 from hflow.misc.jax import batchmap, hess_trace_estimator, tracewrap, meanvmap
+from jax.flatten_util import ravel_pytree
 
 
 def get_loss_fn(loss_cfg: Loss, sample_cfg: Sample, s_fn):
@@ -160,6 +161,9 @@ def OV_Loss(s_combine, sigma=0.0, alpha=0.0, alpha_quant=None):
                 reg = s_Ex_Vt(mu, X_batch, t_batch, params) ** 2
             if alpha_quant == "s_t":
                 reg = dt**2
+            if alpha_quant == "p":
+                params_flat = ravel_pytree(params)[0]
+                reg = jnp.linalg.norm(params_flat)
             interior += reg * alpha
 
         if quad_weights is not None:

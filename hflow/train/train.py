@@ -29,4 +29,4 @@ def train_model(opt_cfg: Optimizer, arg_fn, loss_fn, psi_theta_init, key):
     if opt_cfg.save_params_history:
         R.RESULT["param_history"] = param_history
 
-    return last_params
+    return last_params, param_history

@@ -21,7 +21,7 @@ from hflow.train.loss import generate_sigmas
 
 
 def test_model(cfg: Config, data, s_fn, opt_params, key):
-        
+
     test_cfg = cfg.test
     if not test_cfg.run:
         return None
@@ -29,8 +29,7 @@ def test_model(cfg: Config, data, s_fn, opt_params, key):
     t_int = np.linspace(0.0, 1.0, len(t))
     M, T, N, D = sol.shape
     if test_cfg.t_samples is not None:
-        t_idx = np.linspace(0, T-1, test_cfg.t_samples,
-                            endpoint=True, dtype=np.int32)
+        t_idx = np.linspace(0, T - 1, test_cfg.t_samples, endpoint=True, dtype=np.int32)
         sol = sol[:, t_idx]
         t_int = t_int[t_idx]
 
@@ -40,34 +39,35 @@ def test_model(cfg: Config, data, s_fn, opt_params, key):
     sigma = cfg.loss.sigma
     sol = sol[:, :, samples_idx]
 
-    R.RESULT['t_int'] = t_int
+    R.RESULT["t_int"] = t_int
     for mu_i in range(len(mus)):
-        log.info(f'testing mu {mus[mu_i]} {mu_i}')
+        log.info(f"testing mu {mus[mu_i]} {mu_i}")
         true_sol = sol[mu_i]
 
         start = time.time()
-        if 'ov' in cfg.loss.loss_fn  or cfg.loss.loss_fn == 'dice':
-            test_sol = solve_test_sde(s_fn, opt_params, ics[mu_i], t_int,
-                                      test_cfg.dt, sigma, mus[mu_i], key)
-        elif cfg.loss.loss_fn == 'ncsm':
+        if "ov" in cfg.loss.loss_fn or cfg.loss.loss_fn == "dice":
+            test_sol = solve_test_sde(
+                s_fn, opt_params, ics[mu_i], t_int, test_cfg.dt, sigma, mus[mu_i], key
+            )
+        elif cfg.loss.loss_fn == "ncsm":
             sigmas = generate_sigmas(cfg.loss.L)
             test_sol = solve_test_ald(
-                s_fn, opt_params, ics[mu_i], t_int, sigmas, mus[mu_i], key, cfg.loss.T)
-        elif cfg.loss.loss_fn == 'cfm' or cfg.loss.loss_fn == 'si':
+                s_fn, opt_params, ics[mu_i], t_int, sigmas, mus[mu_i], key, cfg.loss.T
+            )
+        elif cfg.loss.loss_fn == "cfm" or cfg.loss.loss_fn == "si":
             test_sol = solve_test_cfm(
-                s_fn, opt_params, ics[mu_i], t_int, mus[mu_i], cfg.loss.T)
+                s_fn, opt_params, ics[mu_i], t_int, mus[mu_i], cfg.loss.T
+            )
         end = time.time()
-        R.RESULT[f'test_integrate_time_{mu_i}'] = end-start
+        R.RESULT[f"test_integrate_time_{mu_i}"] = end - start
 
         if test_cfg.save_sol:
-            R.RESULT[f'true_sol_{mu_i}'] = true_sol
-            R.RESULT[f'test_sol_{mu_i}'] = test_sol
+            R.RESULT[f"true_sol_{mu_i}"] = true_sol
+            R.RESULT[f"test_sol_{mu_i}"] = test_sol
 
         compute_metrics(cfg, test_cfg, true_sol, test_sol, mu_i)
 
-
-        plot_test(test_cfg, true_sol, test_sol,
-                  t_int, test_cfg.n_plot_samples, mu_i)
+        plot_test(test_cfg, true_sol, test_sol, t_int, test_cfg.n_plot_samples, mu_i)
 
         # if test_cfg.additional:
         #     additional_ops(s_fn, opt_params, test_sol, t_int, mus[mu_i], mu_i)
@@ -81,23 +81,23 @@ def additional_ops(s_fn, opt_params, test_sol, t_int, mu, mu_i):
 
     def s_sep(mu, x, t, params):
         mu_t = jnp.concatenate([mu, t])
-        return s_fn(mu_t, x, params) #- s(mu_t, jnp.zeros_like(x), params)
+        return s_fn(mu_t, x, params)  # - s(mu_t, jnp.zeros_like(x), params)
 
     s_Ex = meanvmap(s_sep, in_axes=(None, 0, None, None))
     s_Ex_Vt = vmap(s_Ex, in_axes=(None, 0, 0, None))
 
-
     Es_time = s_Ex_Vt(mu, test_sol, t_int, opt_params)
 
-    R.RESULT[f'Es_time_{mu_i}'] = Es_time
+    R.RESULT[f"Es_time_{mu_i}"] = Es_time
     outdir = HydraConfig.get().runtime.output_dir
 
     plt.plot(t_int, Es_time)
     plt.xlabel("time")
-    plt.ylabel('E[s]')
+    plt.ylabel("E[s]")
     plt.title("E[s] over time")
-    plt.savefig(f'{outdir}/Es_time_{mu_i}.png')
+    plt.savefig(f"{outdir}/Es_time_{mu_i}.png")
     plt.clf()
+
 
 def solve_test_cfm(s_fn, params, ics, t_int, mu, T):
 
@@ -107,8 +107,7 @@ def solve_test_cfm(s_fn, params, ics, t_int, mu, T):
     def integrate(mu, T, params):
 
         def fn(tau, y):
-            mu_t_tau = jnp.concatenate(
-                [mu.reshape(1), T.reshape(1), tau.reshape(1)])
+            mu_t_tau = jnp.concatenate([mu.reshape(1), T.reshape(1), tau.reshape(1)])
             return s_Vx(mu_t_tau, y, params)
 
         sol = odeint_rk4(fn, ics, taus)
@@ -116,7 +115,7 @@ def solve_test_cfm(s_fn, params, ics, t_int, mu, T):
         return sol[-1]
 
     test_sol = []
-    for T in tqdm(t_int, desc='CFM'):
+    for T in tqdm(t_int, desc="CFM"):
         s = integrate(mu, T, params)
         test_sol.append(s)
 
@@ -140,8 +139,9 @@ def solve_test_sde(s_fn, params, ics, t_int, dt, sigma, mu, key):
 
     keys = jax.random.split(key, num=len(ics))
     test_sol = vmap(solve_sde_ic, (0, 0, None, None, None, None))(
-        ics, keys, t_int, dt, drift, diffusion)
-    test_sol = rearrange(test_sol, 'N T D -> T N D')
+        ics, keys, t_int, dt, drift, diffusion
+    )
+    test_sol = rearrange(test_sol, "N T D -> T N D")
 
     return test_sol
 
@@ -154,13 +154,12 @@ def solve_test_ald(s_fn, params, ics, t_int, sigmas, mu, key, T):
     def ald(key, mu, t_infer, sigmas, params, eps=2e-5):
         x = jax.random.normal(key, (D,))
         for sigma in sigmas:
-            alpha = eps * sigma**2/sigmas[-1]**2
+            alpha = eps * sigma**2 / sigmas[-1] ** 2
             for _ in range(T):
                 key, subkey = jax.random.split(key)
                 z = jax.random.normal(subkey, x.shape)
                 mu_t_sigma = jnp.concatenate([mu, t_infer, sigma])
-                x = x + alpha * 0.5 * \
-                    s_fn(mu_t_sigma, x, params) + jnp.sqrt(alpha) * z
+                x = x + alpha * 0.5 * s_fn(mu_t_sigma, x, params) + jnp.sqrt(alpha) * z
         return x
 
     ald_vmap = vmap(ald, (0, None, None, None, None))
@@ -171,7 +170,7 @@ def solve_test_ald(s_fn, params, ics, t_int, sigmas, mu, key, T):
     t_int = t_int.reshape(-1, 1)
     keys = jax.random.split(key, n_samples)
     test_sol = []
-    for t in tqdm(t_int, desc='ALD'):
+    for t in tqdm(t_int, desc="ALD"):
         s = ald_vmap(keys, mu, t, sigmas, params)
         test_sol.append(s)
 
