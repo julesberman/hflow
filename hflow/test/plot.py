@@ -8,13 +8,13 @@ from jax import jacrev, jit, vmap
 
 from hflow.config import Test
 from hflow.io.utils import log
-from hflow.misc.plot import imshow_movie, line_movie, scatter_movie
+from hflow.misc.plot import  scatter_movie, plot_grid_movie
 
 
 def get_hist_single(frame, nx):
     frame = frame.T
     H, x, y = jnp.histogram2d(
-        frame[0], frame[1], bins=nx, range=[[0, 1], [0, 1]])
+        frame[0], frame[1], bins=nx)
     return H
 
 
@@ -43,8 +43,8 @@ def plot_test(test_cfg: Test, true_sol, test_sol, t_int, n_plot, mu_i):
             plot_sol = jnp.hstack(
                 [true_sol[:, idx_sample], test_sol[:, idx_sample]])
             cs = [*['r']*n_plot, *['b']*n_plot]
-            scatter_movie(plot_sol, t=t_int, c=cs, alpha=0.3, xlim=[0, 1], ylim=[
-                0, 1], show=False, frames=frames, save_to=f'{outdir}/sol_{mu_i}.gif')
+            scatter_movie(plot_sol, t=t_int, c=cs, alpha=0.3, xlim=[0, 1], ylim=[0, 1], 
+            show=False, frames=frames, save_to=f'{outdir}/sol_{mu_i}.gif')
         except Exception as e:
             log.error(e, "could not plot particles")
 
@@ -56,24 +56,8 @@ def plot_test(test_cfg: Test, true_sol, test_sol, t_int, n_plot, mu_i):
                 true_sol = true_sol[:, :, dim_idx]
                 test_sol = test_sol[:, :, dim_idx]
             idx_time = np.linspace(0, len(test_sol)-1, frames, dtype=np.int32)
-            hist_sol = get_hist(test_sol[idx_time])
-            imshow_movie(hist_sol, t=t_int[idx_time], show=False,
-                         frames=frames, save_to=f'{outdir}/test_hist_{mu_i}.gif')
-            hist_sol = get_hist(true_sol[idx_time])
-            imshow_movie(hist_sol, t=t_int[idx_time], show=False,
-                         frames=frames, save_to=f'{outdir}/true_hist_{mu_i}.gif')
+            hist_sol_test = get_hist(test_sol[idx_time])
+            hist_sol_true = get_hist(true_sol[idx_time])
+            plot_grid_movie([hist_sol_true, hist_sol_test], frames=frames, t=t_int[idx_time], show=False, save_to=f'{outdir}/hist_{mu_i}.gif', titles_x=['True', 'Pred'], live_cbar=False)
         except Exception as e:
             log.error(e, "could not plot hist")
-
-    # plot func
-    if test_cfg.plot_func:
-        true_sol = rearrange(true_sol, 'T N D -> N T D')
-        test_sol = rearrange(test_sol, 'T N D -> N T D')
-        try:
-            ylim = [true_sol.min()*1.1, true_sol.max()*1.1]
-            line_movie(true_sol, t=t_int, show=False, ylim=ylim, frames=frames,
-                       save_to=f'{outdir}/true_func_{mu_i}.gif')
-            line_movie(test_sol, t=t_int, show=False, ylim=ylim, frames=frames,
-                       save_to=f'{outdir}/test_func_{mu_i}.gif')
-        except Exception as e:
-            log.error(e, "could not plot func")

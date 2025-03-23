@@ -44,3 +44,27 @@ def get_2d_lin(mu):
         return jnp.asarray([0, 0, 1, 1])*5e-2
 
     return drift, diffusion
+
+
+
+def get_ic_vfp(key):
+    mu_0 = jnp.asarray([0, 10])
+    ic = jax.random.normal(key, (2,))
+    ic = (ic*0.5) - mu_0
+    return ic
+
+
+def get_2d_vfp(mu):
+    def phi(x):
+        return -(0.2 + 0.2*jnp.cos(jnp.pi*x**4)+0.1*jnp.sin(jnp.pi*x))
+
+    def drift(t, y, *args):
+        x1, x2 = y
+        x1_dot = x2*phi(x1)
+        x2_dot = -x1
+        return jnp.asarray([x1_dot, x2_dot])
+
+    def diffusion(t, y, *args):
+        return jnp.asarray([0, 1])
+
+    return drift, diffusion

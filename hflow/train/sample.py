@@ -169,6 +169,9 @@ def interplate_in_t(sols, true_t, interp_t):
     data_spacing = [np.linspace(0.0, 1.0, n) for n in sols.shape[1:]]
     spacing = [np.squeeze(true_t), *data_spacing]
 
+    # [print(s.shape) for s in spacing]
+    # print(sols.shape)
+
     gt_f = RegularGridInterpolator(spacing, sols, method="linear", bounds_error=True)
 
     interp_spacing = [np.squeeze(interp_t), *data_spacing]

@@ -2,12 +2,13 @@ import jax.numpy as jnp
 import numpy as np
 
 from hflow.config import Config, Network
-from hflow.net.build import build_colora, build_mlp
-
-
+from hflow.net.dnn import DNN
+import hflow.io.result as R
+from hflow.config import Optimizer
+import jax
 def get_network(cfg: Config, data, key):
 
-    unet, hnet = cfg.unet, cfg.hnet
+    net = cfg.net
 
     sols, mu, t = data
     MT = mu.shape[-1] + 1
@@ -17,7 +18,7 @@ def get_network(cfg: Config, data, key):
         x_dim = D
         mu_t_dim = MT
         out_dim = 1
-        if cfg.unet.homo:
+        if cfg.net.homo:
             out_dim = D
     elif (
         cfg.loss.loss_fn == "ncsm"
@@ -28,93 +29,42 @@ def get_network(cfg: Config, data, key):
         mu_t_dim = MT + 1  # one more for sigma
         out_dim = D
 
-    period = np.asarray([1.0] * x_dim)
 
-    u_config = {
-        "width": unet.width,
-        "layers": unet.layers,
-        "activation": unet.activation,
-        "last_activation": unet.last_activation,
-        "bias": unet.bias,
-        "period": period,
-        "w_init": unet.w_init,
-    }
+    net = DNN(
+        features=[net.width] * net.depth,
+        activation=net.activation,
+        cond_features=net.cond_features,
+        use_bias=net.bias,
+        cond_in=net.cond_in,
+        out_features=out_dim,
+    )
 
-    h_config = {
-        "width": hnet.width,
-        "layers": hnet.layers,
-        "activation": hnet.activation,
-        "last_activation": hnet.last_activation,
-        "bias": hnet.bias,
-        "w_init": hnet.w_init,
-    }
+    x_in = jnp.zeros(x_dim)
+    cond_x = jnp.zeros(mu_t_dim)
 
-    if cfg.unet.model == "colora":
-        u_fn, h_fn, theta_init, psi_init = build_colora(
-            u_config,
-            h_config,
-            x_dim,
-            mu_t_dim,
-            out_dim,
-            rank=unet.rank,
-            key=key,
-            full=unet.full,
-        )
-        params_init = (psi_init, theta_init)
+    params_init = net.init(key, x_in, cond_x)
 
-        def s_fn(t, x, params):
-            psi, theta = params
+    param_count = sum(x.size for x in jax.tree_leaves(params_init))
+    print(f"n_params {param_count:,}")
+    R.RESULT["n_params"] = param_count
 
-            phi = h_fn(psi, t)
-            return jnp.squeeze(u_fn(theta, phi, x))
 
-    elif cfg.unet.model == "film":
-        mlp_layers = ["F" if l == "C" else l for l in unet.layers]
-        u_config["layers"] = mlp_layers
+    def s_fn(t, x, params):
+        return jnp.squeeze(net.apply(params, x, t))
 
-        u_fn, h_fn, theta_init, psi_init = build_colora(
-            u_config,
-            h_config,
-            x_dim,
-            mu_t_dim,
-            out_dim,
-            rank=unet.rank,
-            key=key,
-            full=unet.full,
-        )
-        params_init = (psi_init, theta_init)
+    final_net = s_fn
 
-        def s_fn(t, x, params):
-            psi, theta = params
-            phi = h_fn(psi, t)
-            return jnp.squeeze(u_fn(theta, phi, x))
-
-    elif cfg.unet.model == "mlp":
-
-        mlp_layers = ["D" if (l == "C" or l == "F") else l for l in unet.layers]
-        u_config["layers"] = mlp_layers
-        u_fn, params_init = build_mlp(
-            u_config, in_dim=x_dim + mu_t_dim, out_dim=out_dim, key=key
-        )
-
-        def s_fn(t, x, params):
-            t_x = jnp.concatenate([t, x])
-            return jnp.squeeze(u_fn(params, t_x))
-
-    if cfg.unet.fix_u:
-
+    if cfg.net.fix_u:
         def s_fn_fixed(t, x, params):
             return s_fn(t, x, params) - s_fn(t, x * 0 + 0.5, params)
-
-        return s_fn_fixed, params_init
-
-    if cfg.unet.homo:
-
+        final_net = s_fn_fixed
+        
+    if cfg.net.homo:
         def s_fn_homo(t, x, params):
             f_x = s_fn(t, x, params)
             y = 0.5 * jnp.dot(x, f_x)
             return jnp.squeeze(y)
 
-        return s_fn_homo, params_init
+        final_net = s_fn_homo
 
-    return s_fn, params_init
+    return final_net, params_init

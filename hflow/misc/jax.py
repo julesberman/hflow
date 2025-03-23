@@ -1,7 +1,7 @@
 import jax
 import jax.numpy as jnp
 from jax import jacfwd, jacrev, jvp, vmap
-
+import random
 
 def get_rand_idx(key, N, bs):
     if bs > N:
@@ -55,3 +55,7 @@ def batchmap(f, n_batches, argnum=0):
         return jnp.concatenate(result)
 
     return wrap
+
+def randkey():
+    return jax.random.PRNGKey(random.randint(-1e12, 1e12))
+

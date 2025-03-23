@@ -49,14 +49,12 @@ class DNN(nn.Module):
         return x
 
 
-def get_init(init, w0):
+def get_init(init):
 
     if init is None or init == 'lecun':
         w = initializers.lecun_normal()
     elif init == 'ortho':
         w = initializers.orthogonal()
-    elif init == 'normal':
-        w = initializers.truncated_normal(w0)
     elif init == 'he':
         w = initializers.he_normal()
     return w
@@ -97,8 +95,9 @@ def get_activation(activation):
         a = Siren(omega=10.0)
     elif activation == 'sin':
         a = jnp.sin
-    elif activation == 'hswish':
-        a = jax.nn.hard_swish
+    elif activation == 'gelu':
+        a = jax.nn.gelu
     elif activation == 'lipswish':
         return Lipswish()
+
     return a

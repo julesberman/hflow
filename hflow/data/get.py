@@ -2,7 +2,7 @@ import os
 import time
 from functools import partial
 from pathlib import Path
-
+import jax
 import h5py
 import numpy as np
 import pandas as pd
@@ -20,7 +20,7 @@ from hflow.data.trap import get_ic_trap, get_trap
 from hflow.data.utils import normalize
 from hflow.data.vlasov import run_vlasov
 from hflow.io.utils import log, save_pickle
-from hflow.truth.sburgers import solve_sburgers_samples
+from hflow.data.ip import get_inertial_partices
 
 
 def read_from_hdf5(path, n_samples):
@@ -42,7 +42,20 @@ def get_data(problem, data_cfg: Data, key):
 
     sols = []
 
-    if problem == 'vbump':
+    if problem == 'static':
+        train_mus = np.asarray([0.0])
+        test_mus = np.asarray([0.0])
+        mus = np.concatenate([train_mus, test_mus])
+        sols = jax.random.normal(key, shape=(2,len(t_eval), n_samples, 2))
+        sols = np.asarray(sols)
+        
+    elif problem == 'ip':
+        sols_train, train_mus, t_eval = get_inertial_partices(key, n_samples, train=True)
+        sols_test, test_mus, t_eval = get_inertial_partices(key, n_samples, train=False)
+        mus = np.concatenate([train_mus, test_mus])
+        sols = np.concatenate([sols_train, sols_test])
+
+    elif problem == 'vbump':
         train_mus = np.asarray([1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0])
         test_mus = np.asarray([1.35, 1.95])
         mus = np.concatenate([train_mus, test_mus])
@@ -179,6 +192,7 @@ def get_data(problem, data_cfg: Data, key):
 
     R.RESULT['t_eval'] = t_eval
 
+    
     sols, mus, t_eval = normalize_dataset(
         sols, mus, t_eval, data_cfg.normalize)
 
@@ -225,12 +239,16 @@ def normalize_dataset(sols, mus, t_eval, normalize_data):
     t1 = t_eval.reshape((-1, 1))
     mus_1 = mus.reshape((-1, 1))
 
-    if len(np.unique(mus_1[:, 0])) == 1:
-        mus_1 = mus_1*0.0
-        (mu_shift, mu_scale) = 0.0, 0.0
+    if normalize_data:
+        if len(np.unique(mus_1[:, 0])) == 1:
+            mus_1 = mus_1*0.0
+            (mu_shift, mu_scale) = 0.0, 0.0
+        else:
+            mus_1, mu_shift, mu_scale = normalize(
+                mus_1, axis=(0), return_stats=True, method='std')
     else:
-        mus_1, mu_shift, mu_scale = normalize(
-            mus_1, axis=(0), return_stats=True, method='std')
+        mu_shift, mu_scale = 0.0, 1.0
+    R.RESULT['mu_norm'] = (mu_shift, mu_scale)  
 
     if normalize_data:
         sols, d_shift, d_scale = normalize(
@@ -239,6 +257,5 @@ def normalize_dataset(sols, mus, t_eval, normalize_data):
     else:
         R.RESULT['data_norm'] = (0.0, 1.0)
 
-    R.RESULT['mu_norm'] = (mu_shift, mu_scale)
 
     return sols, mus_1, t1

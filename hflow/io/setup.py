@@ -40,8 +40,9 @@ def setup(config: Config):
         jax.config.update("jax_enable_x64", False)
 
     if config.platform is not None:
+        os.environ["JAX_PLATFORM_NAME"] =  config.platform
         jax.config.update('jax_platform_name', config.platform)
-
+   
     if config.debug_nans:
         jax.config.update("jax_debug_nans", True)
 

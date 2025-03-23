@@ -234,6 +234,22 @@ def generate_sigmas(L, start=1, end=1e-2):
     return sigmas
 
 
+def Label_Loss(s_fn, t_batches=1):
+
+    def loss_fn(params, x_t_batch, mu, t_batch, quad_weights, key):
+
+        # remove endpoints from OV loss
+        x_t_batch = x_t_batch[1:-1]
+        t_batch = t_batch[1:-1]
+
+        T, N, D = x_t_batch.shape
+        T, MT = t_batch.shape
+
+        vec = x_t_batch
+
+    return loss_fn
+
+
 def CFM_Loss(s_fn, t_batches=1):
 
     def loss_fn(params, x_t_batch, mu, t_batch, quad_weights, key):

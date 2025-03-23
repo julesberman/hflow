@@ -14,7 +14,13 @@ from hflow.misc.jax import batchmap, hess_trace_estimator, tracewrap
 from scipy.linalg import sqrtm
 from hydra.core.hydra_config import HydraConfig
 from hflow.config import Config
+import jax
+import jax.numpy as jnp
 
+from ott import utils
+from ott.geometry import pointcloud
+from ott.problems.linear import linear_problem
+from ott.solvers.linear import sinkhorn
 
 def get_cov_diag(A):
     return jnp.diag(jnp.cov(A, rowvar=False))
@@ -106,12 +112,16 @@ def compute_metrics(cfg: Config, test_cfg: Test, true_sol, test_sol, mu_i):
         log.info(f"computing wasserstein")
 
         epsilon = test_cfg.w_eps
-        s_time = compute_wasserstein_over_D(true_sol, test_sol, epsilon)
+        n_wass_time = 16
 
-        R.RESULT[f"time_sink_dist_{mu_i}"] = s_time
-        mean_sink_dist = np.mean(s_time)
-        R.RESULT[f"mean_sink_dist_{mu_i}"] = mean_sink_dist
-        log.info(f"mean_sink_dist_{mu_i}: {mean_sink_dist:.3e}")
+        t_idx = np.linspace(0, 1, n_wass_time, dtype=np.int32)
+
+        w_time = compute_wasserstein_time(test_sol[t_idx], true_sol[t_idx], eps=epsilon)
+
+        R.RESULT[f"time_wass_dist_{mu_i}"] = w_time
+        mean_w_dist = np.mean(w_time)
+        R.RESULT[f"mean_wass_dist_{mu_i}"] = mean_w_dist
+        log.info(f"mean_wass_dist_{mu_i}: {mean_w_dist:.3e}")
 
     if test_cfg.analytic:
         if cfg.problem == "lin":
@@ -208,41 +218,6 @@ def average_metrics(mus):
             R.RESULT[f"{metric}_total"] = total / count
 
 
-def compute_wasserstein_scipy(A, B):
-
-    T = len(A)
-
-    wass = []
-    for t in tqdm(range(T)):
-        at, bt = A[t], B[t]
-        at, bt = at[:1000], bt[:1000]
-        w = scipy.stats.wasserstein_distance_nd(at, bt)
-        wass.append(w)
-
-    return wass
-
-
-def compute_wasserstein_ott(A, B, eps):
-    from ott.geometry import pointcloud
-    from ott.tools import sinkhorn_divergence
-
-    geometry = pointcloud.PointCloud(x=A, y=B, epsilon=eps)
-    result = sinkhorn_divergence.sinkhorn_divergence(geom=geometry, x=A, y=B)
-    sk_div = result.divergence
-    return sk_div
-
-
-def compute_wasserstein_over_D(A, B, eps):
-    T = len(A)
-    compute = jit(compute_wasserstein_ott)
-
-    wass = []
-    for t in tqdm(range(T)):
-        w = compute(A[t], B[t], eps)
-        wass.append(w)
-
-    return np.asarray(wass)
-
 
 def compute_electric_energy(sol, boxsize=50):
     from hflow.data.vlasov import get_gradient_matrix, get_laplacian_matrix, getAcc
@@ -273,33 +248,22 @@ def compute_electric_energy(sol, boxsize=50):
     return E
 
 
-# def log_rho_0(x): return -jnp.sum(x**2)/2 / \
-#     SD_0**2 - D/2*jnp.log(2*jnp.pi*SD_0**2)
 
+def compute_wasserstein_time(test_sol, true_sol, eps=1e-3):
+    T = test_sol.shape[0]
+    wdist = []
+    solver = sinkhorn.Sinkhorn(max_iterations=10_000, threshold=eps)
+    solver = jit(solver)
 
-# def get_entropy(sols, t_eval, s_fn, log_rho_0):
-#     # s is a funcion t, x -> R
-#     # log_rho_0 is a function x -> R
-#     # laplace_s is a function t, x -> R
-#     # t_eval is the array of times where the solution is evaluated
-#     s_dx = jacrev(s, 1)
-#     trace_dds = tracewrap(jacfwd(s_dx, 1))
-#     laplace_s = vmap(trace_dds, (None, 0, None))
+    for t in tqdm(range(T), colour='blue'):
+        x = test_sol[t]
+        y = true_sol[t]
+        geom = pointcloud.PointCloud(x, y)
+        lp = linear_problem.LinearProblem(geom)
+        out = solver(lp)
 
-#     T, N, D = sols.shape
-#     E_log_rho_0 = jnp.sum(vmap(log_rho_0)(sols[0, :, :])) / N
-#     sols_with_t = jnp.concatenate(
-#         [t_eval[:, None, None] * jnp.ones((T, N, 1)), sols], axis=2)
-#     weights = - t_eval[:-1] + t_eval[1:]  # get the dts
-#     sols_with_t = sols_with_t[:-1, :, :]  # cut off the last time
-#     sols_with_t_and_weights = jnp.concatenate(
-#         [weights[:, None, None] * jnp.ones((T-1, N, 1)), sols_with_t], axis=2)
-
-#     def integrand(wtx):
-#         w, t, x = wtx[0], wtx[1], wtx[2:]
-#         return w * laplace_s(t, x)
-
-#     integrand_all_times = jnp.sum(
-#         vmap(vmap(integrand))(sols_with_t_and_weights)) / N
-
-#     return - E_log_rho_0 + integrand_all_times
+        wdist_t = jnp.sqrt(out.primal_cost)
+        wdist.append(wdist_t)
+    
+    # Stack into a single JAX array
+    return jnp.stack(wdist, axis=0)

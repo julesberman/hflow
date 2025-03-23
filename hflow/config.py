@@ -7,67 +7,31 @@ from omegaconf import OmegaConf
 
 from hflow.misc.misc import epoch_time, unique_id
 
+# SWEEP = {
+#     "problem": "static",
+#     "optimizer.iters": "10_000",  # ,50_000',
+#     "loss.loss_fn": "ov, dice",
+#     "seed": "1,2,3",
+#     "sample.scheme_t": "simp,rand",
+#     "loss.sigma": "0.0",
+# }
+
 SWEEP = {
-    "problem": "lin",
-    "optimizer.iters": "10_000",  # ,50_000',
-    "loss.loss_fn": "ov, dice",
+    "problem": "ip",
+    "optimizer.iters": "10_000, 25_000, 50_000",  
+    "loss.loss_fn": "dice",
     "seed": "1,2,3",
-    "loss.alpha": "1e-2, 1e-1, 1e0, 1e1, 1e2",
-    "loss.alpha_quant": "s, s_t",
-    "sample.scheme_t": "simp",
-    "loss.sigma": "1e-2",
+    "sample.scheme_t": "rand",
+    "loss.sigma": "0.0",
     "x64": "True",
-    "data.omega": "12",
+    "sample.bs_n": "512",
+    "net.width": "128",
+    "net.cond_in": "append",
+    "data.normalize": "False"
 }
 
-
-# SWEEP = {
-#     'problem': 'lz9',
-#     'optimizer.iters': '50_000',  # ,50_000',
-#     'loss.loss_fn': 'ov',
-#     'seed': '1',
-#     'sample.scheme_t': 'simp',
-#     'loss.sigma': '7e-2',
-#     'sample.bs_t': '256',
-#     'sample.bs_n': '256',
-#     'x64': 'True',
-#     'test.save_sol': 'True'
-
-# }
-
-
-# SWEEP = {
-#     'problem': 'v62',
-#     'optimizer.iters': '10_000,12_000,15_000,20_000,25_000',  # ,50_000',
-#     'loss.loss_fn': 'ov',
-#     'seed': '1',
-#     'sample.scheme_t': 'simp',
-#     'loss.sigma': '0.0',
-#     'sample.bs_t': '256',
-#     'sample.bs_n': '256',
-#     'unet.width': '64',
-#     'x64': 'True',
-#     'test.save_sol': 'True',
-#     'data.t_end': '6',
-# }
-
-
-# SWEEP = {
-#     'problem': 'lin',
-#     'unet.model': 'colora,film,mlp',
-#     'optimizer.iters': '10_000',  # ,50_000',
-#     'loss.loss_fn': 'ov_old',
-#     'seed': '1,2,3,4,5',
-#     'sample.scheme_t': 'gauss,simp',
-#     'x64': 'False',
-#     'loss.sigma': '5e-2,1e-2',
-#     'test.save_sol': 'False',
-#     'data.omega': '8.0'
-# }
-
-
 SLURM_CONFIG = {
-    "timeout_min": 30,
+    "timeout_min": 60*3,
     "cpus_per_task": 4,
     "mem_gb": 200,
     "gpus_per_node": 1,
@@ -78,22 +42,19 @@ SLURM_CONFIG = {
 
 @dataclass
 class Network:
-    model: str = "colora"
     width: int = 64
-    layers: List[str] = field(default_factory=lambda: ["C"] * 7)  # ['P',*['C']*7])
-    activation: str = "swish"
-    rank: int = 3
-    full: bool = True
+    depth: int = 6
+    cond_features: List[int] = field(default_factory=lambda: [32] * 3)
+    activation: str = "gelu"
     bias: bool = True
-    last_activation: Union[str, None] = "none"
-    w_init: str = "lecun"
     fix_u: Union[bool, None] = None
     homo: bool = False
+    cond_in: str = 'film'
 
 
 @dataclass
 class Optimizer:
-    lr: float = 2e-3
+    lr: float = 5e-4
     iters: int = 25_000
     scheduler: bool = True
     optimizer: str = "adam"
@@ -159,8 +120,9 @@ class Config:
 
     problem: str
 
-    unet: Network = field(default_factory=Network)
-    hnet: Network = field(default_factory=lambda: Network(width=15, layers=["D"] * 3))
+    net: Network = field(default_factory=Network)
+    # unet: Network = field(default_factory=Network)
+    # hnet: Network = field(default_factory=lambda: Network(width=15, layers=["D"] * 3))
     optimizer: Optimizer = field(default_factory=Optimizer)
     data: Data = field(default_factory=Data)
 
@@ -222,7 +184,8 @@ hydra_config = {
     },
     "job": {"env_set": {"XLA_PYTHON_CLIENT_PREALLOCATE": "false"}},
 }
-
+import logging
+logging.getLogger("matplotlib").setLevel(logging.WARNING)
 
 ##################################
 ## problem wise default configs ##
@@ -290,6 +253,26 @@ lin_config = Config(
 )
 
 
+static_config = Config(
+    problem="static",
+    data=Data(t_end=1, dt=(1/512), n_samples=10_000
+    ),
+    test=Test(plot_particles=True, mean=True, wass=True),
+    net=Network(width=32, depth=3, cond_in='append'),
+    loss=Loss(sigma=0.0, loss_fn='dice'),
+    optimizer=Optimizer(lr=1e-3, iters=25_000),
+    sample=Sample(bs_n=128, bs_t=128, scheme_t='rand')
+)
+
+ip_config = Config(
+    problem="ip",
+    data=Data(n_samples=10_000),
+    test=Test(plot_particles=True, mean=True, wass=True, plot_hist=True),
+    loss=Loss(sigma=0.0, loss_fn='dice'),
+    sample=Sample(bs_n=512, bs_t=256, scheme_t='rand'),
+    net=Network(width=256, depth=6, cond_in='film'),
+)
+
 cs.store(name="lz9", node=lz9_config)
 cs.store(name="mdyn", node=mdyn_config)
 cs.store(name="trap", node=trap_config)
@@ -298,3 +281,5 @@ cs.store(name="vtwo", node=two_config)
 cs.store(name="vbump", node=bump_config)
 cs.store(name="v6", node=v6_config)
 cs.store(name="lin", node=lin_config)
+cs.store(name="static", node=static_config)
+cs.store(name="ip", node=ip_config)
