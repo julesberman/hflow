@@ -30,8 +30,23 @@ SWEEP = {
     "data.normalize": "False"
 }
 
+
+
+
+SWEEP = {
+    "problem": "rwave",
+    "optimizer.iters": "20_000, 50_000, 100_000",  
+    "loss.loss_fn": "dice, ov",
+    "sample.scheme_t": "rand",
+    "loss.sigma": "0.0",
+    "x64": "False",
+    "net.arch": "resnet, unet",
+    "data.sub_x": "2,4"
+
+}
+
 SLURM_CONFIG = {
-    "timeout_min": 60*3,
+    "timeout_min": 60*6,
     "cpus_per_task": 4,
     "mem_gb": 200,
     "gpus_per_node": 1,
@@ -42,14 +57,15 @@ SLURM_CONFIG = {
 
 @dataclass
 class Network:
+    arch: str = 'mlp'
     width: int = 64
     depth: int = 6
-    cond_features: List[int] = field(default_factory=lambda: [32] * 3)
-    activation: str = "gelu"
+    cond_features: List[int] = field(default_factory=lambda: [64] * 4)
+    activation: str = "swish"
     bias: bool = True
     fix_u: Union[bool, None] = None
     homo: bool = False
-    cond_in: str = 'film'
+    cond_in: str = 'append'
 
 
 @dataclass
@@ -70,14 +86,14 @@ class Data:
     normalize: bool = True
     save: bool = False
     load: bool = False
-    dim: Union[int, None] = None
     omega: float = 8.0
-
+    sub_x: int = 4
+    dim: Union[int, None] = None
 
 @dataclass
 class Loss:
-    loss_fn: str = "ov"
-    sigma: float = 1e-1
+    loss_fn: str = "dice"
+    sigma: float = 0.0
     log: bool = False
     trace: str = "normal"
     L: int = 10
@@ -90,7 +106,7 @@ class Loss:
 class Sample:
     bs_n: int = 256
     bs_t: int = 256
-    scheme_t: str = "simp"
+    scheme_t: str = "rand"
     scheme_n: str = "rand"
     scheme_w: str = "normal"
     all_mu: bool = False
@@ -113,6 +129,7 @@ class Test:
     mean: bool = False
     wass: bool = False
     analytic: bool = False
+    plot_fields: bool = False
 
 
 @dataclass
@@ -273,6 +290,27 @@ ip_config = Config(
     net=Network(width=256, depth=6, cond_in='film'),
 )
 
+
+rwave_config = Config(
+    problem="rwave",
+    data=Data(n_samples=2048),
+    sample=Sample(bs_n=32, bs_t=64),
+    net=Network(arch='resnet'),
+    x64=False,
+    test=Test(mean=True, plot_fields=True, plot_particles=True),
+)
+
+
+
+lanl_config = Config(
+    problem="lanl",
+    data=Data(sub_x=4),
+    sample=Sample(bs_n=32, bs_t=64),
+    net=Network(arch='resnet'),
+    x64=False,
+    test=Test(mean=True, plot_fields=True, plot_particles=True),
+)
+
 cs.store(name="lz9", node=lz9_config)
 cs.store(name="mdyn", node=mdyn_config)
 cs.store(name="trap", node=trap_config)
@@ -283,3 +321,5 @@ cs.store(name="v6", node=v6_config)
 cs.store(name="lin", node=lin_config)
 cs.store(name="static", node=static_config)
 cs.store(name="ip", node=ip_config)
+cs.store(name="rwave", node=rwave_config)
+cs.store(name="lanl", node=lanl_config)

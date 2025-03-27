@@ -14,7 +14,7 @@ from hflow.config import Config
 from hflow.data.ode import odeint_euler, odeint_euler_maruyama, odeint_rk4
 from hflow.data.sde import solve_sde_ic
 from hflow.io.utils import log
-from hflow.misc.jax import batchmap, get_rand_idx, meanvmap
+from hflow.misc.jax import get_rand_idx, meanvmap
 from hflow.test.metrics import compute_metrics
 from hflow.test.plot import plot_test
 from hflow.train.loss import generate_sigmas

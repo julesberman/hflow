@@ -61,3 +61,18 @@ def pts_array_from_space(space):
     m_grids = jnp.meshgrid(*space, indexing="ij")
     x_pts = jnp.asarray([m.flatten() for m in m_grids]).T
     return x_pts
+    
+def normalize(x, method="std"):
+    if method == "01":
+        mm, mx = x.min(), x.max()
+        shift, scale = mm, (mx - mm)
+    elif method == "-11":
+        mm, mx = x.min(), x.max()
+        shift = (mx + mm) / 2.0
+        scale = (mx - mm) / 2.0
+    else:
+        shift, scale = x.mean(), x.std()
+
+    x = (x - shift) / scale
+
+    return x, (shift, scale)

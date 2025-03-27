@@ -21,7 +21,8 @@ from hflow.data.utils import normalize
 from hflow.data.vlasov import run_vlasov
 from hflow.io.utils import log, save_pickle
 from hflow.data.ip import get_inertial_partices
-
+from hflow.data.rwave import get_wave_random_media
+from hflow.data.lanl import get_lanl_data
 
 def read_from_hdf5(path, n_samples):
     with h5py.File("/scratch/jmb1174/data/" + path + ".hdf5", "r") as file:
@@ -41,8 +42,33 @@ def get_data(problem, data_cfg: Data, key):
     t_eval = np.linspace(0.0, t_end, int(t_end/dt)+1)
 
     sols = []
-
-    if problem == 'static':
+    if problem == "rwave":
+        sigma = 0
+        n_x = 128
+        n_t = 128
+        sub_x = data_cfg.sub_x
+        sub_t = 1
+        sols = get_wave_random_media(
+            n_samples, n_t, n_x, key, batch_size=32, sigma=sigma
+        )
+        sols = sols[:, ::sub_t, ::sub_x, ::sub_x]
+        t_eval = np.linspace(0.0, 1.0, sols.shape[1])
+        train_mus = np.asarray([0.0])
+        test_mus = np.asarray([0.0])
+        mus = np.concatenate([train_mus, test_mus])
+        sols = np.concatenate([sols[None], sols[None]])
+        sols = rearrange(sols, 'M N T X Y -> M T N (X Y)')
+    elif problem == "lanl":
+        sub_x = data_cfg.sub_x
+        sols = get_lanl_data("1", sub_x, 1)
+        t_eval = np.linspace(0.0, 1.0, sols.shape[1])
+        train_mus = np.asarray([0.0])
+        test_mus = np.asarray([0.0])
+        mus = np.concatenate([train_mus, test_mus])
+        sols = np.concatenate([sols[None], sols[None]])
+        sols = rearrange(sols, 'M N T X Y -> M T N (X Y)')
+        
+    elif problem == 'static':
         train_mus = np.asarray([0.0])
         test_mus = np.asarray([0.0])
         mus = np.concatenate([train_mus, test_mus])

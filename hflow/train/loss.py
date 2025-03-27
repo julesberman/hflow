@@ -6,7 +6,7 @@ from einops import rearrange
 from jax import grad, jacfwd, jacrev, jit, jvp, vmap
 
 from hflow.config import Loss, Sample
-from hflow.misc.jax import batchmap, hess_trace_estimator, tracewrap, meanvmap
+from hflow.misc.jax import hess_trace_estimator, tracewrap, meanvmap
 from jax.flatten_util import ravel_pytree
 
 

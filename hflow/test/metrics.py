@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import hflow.io.result as R
 from hflow.config import Test
 from hflow.io.utils import log
-from hflow.misc.jax import batchmap, hess_trace_estimator, tracewrap
+from hflow.misc.jax import hess_trace_estimator, tracewrap
 from scipy.linalg import sqrtm
 from hydra.core.hydra_config import HydraConfig
 from hflow.config import Config

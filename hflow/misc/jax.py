@@ -2,6 +2,7 @@ import jax
 import jax.numpy as jnp
 from jax import jacfwd, jacrev, jvp, vmap
 import random
+from tqdm.auto import tqdm
 
 def get_rand_idx(key, N, bs):
     if bs > N:
@@ -38,24 +39,35 @@ def meanvmap(f, mean_axes=(0,), in_axes=(0,)):
 def tracewrap(f, axis1=0, axis2=1):
     return lambda *fargs, **fkwargs: jnp.trace(f(*fargs, **fkwargs), axis1=axis1, axis2=axis2)
 
+def randkey():
+    return jax.random.PRNGKey(random.randint(-1e12, 1e12))
 
-def batchmap(f, n_batches, argnum=0):
+
+def randkeys(num):
+    k = jax.random.PRNGKey(random.randint(-1e12, 1e12))
+    return jax.random.split(k, num=num)
+
+
+def batchvmap(f, batch_size, in_arg=0, batch_dim=0, pbar=False):
 
     def wrap(*fargs, **fkwarg):
         fargs = list(fargs)
-        X = fargs[argnum]
-        batches = jnp.split(X, n_batches, axis=0)
+        X = fargs[in_arg]
+        n_batches = jnp.ceil(X.shape[batch_dim] // batch_size).astype(int)
+        n_batches = max(1, n_batches)
+        batches = jnp.array_split(X, n_batches, axis=batch_dim)
 
+        in_axes = [None] * len(fargs)
+        in_axes[in_arg] = batch_dim
+        v_f = vmap(f, in_axes=in_axes)
         result = []
+        if pbar:
+            batches = tqdm(batches)
         for B in batches:
-            fargs[argnum] = B
-            a = f(*fargs, **fkwarg)
+            fargs[in_arg] = B
+            a = v_f(*fargs, **fkwarg)
             result.append(a)
 
         return jnp.concatenate(result)
 
     return wrap
-
-def randkey():
-    return jax.random.PRNGKey(random.randint(-1e12, 1e12))
-

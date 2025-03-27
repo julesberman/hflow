@@ -3,9 +3,13 @@ import numpy as np
 
 from hflow.config import Config, Network
 from hflow.net.dnn import DNN
+from hflow.net.linear import LinearFourier
+from hflow.net.unet import UNet
 import hflow.io.result as R
 from hflow.config import Optimizer
 import jax
+from hflow.net.resnet import ResNeSt50FastSmall, ResNet18
+
 def get_network(cfg: Config, data, key):
 
     net = cfg.net
@@ -30,17 +34,40 @@ def get_network(cfg: Config, data, key):
         out_dim = D
 
 
-    net = DNN(
-        features=[net.width] * net.depth,
-        activation=net.activation,
-        cond_features=net.cond_features,
-        use_bias=net.bias,
-        cond_in=net.cond_in,
-        out_features=out_dim,
-    )
+    if net.arch == 'mlp':
+        net = DNN(
+            features=[net.width] * net.depth,
+            activation=net.activation,
+            cond_features=net.cond_features,
+            use_bias=net.bias,
+            cond_in=net.cond_in,
+            out_features=out_dim,
+        )
+    elif net.arch == 'linear':
+        net = LinearFourier(
+            width=net.width,
+            use_bias=net.bias,
+            cond_features=net.cond_features,
+        )
+
+    elif net.arch == 'unet':
+        net = UNet(
+            # feature_depths=[128, 256, 512],
+            feature_depths=[32, 64],
+            emb_features=256,
+            num_res_blocks=2,
+            num_middle_res_blocks=2,
+            out_channels=1,
+
+        )
+
+    elif net.arch == 'resnet':
+        net = ResNeSt50FastSmall(n_classes=1, hidden_sizes=[16, 32, 32])
 
     x_in = jnp.zeros(x_dim)
     cond_x = jnp.zeros(mu_t_dim)
+
+    print('x_in, x_cond', x_in.shape, cond_x.shape)
 
     params_init = net.init(key, x_in, cond_x)
 

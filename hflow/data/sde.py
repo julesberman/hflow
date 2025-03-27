@@ -9,10 +9,8 @@ from diffrax import (Euler, MultiTerm, ODETerm, SaveAt,
 from jax import jit, vmap
 import lineax
 
-from hflow.misc.jax import batchmap
 
-
-def solve_sde(drift, diffusion, t_eval, get_ic, n_samples, dt=1e-2, key=None, batches=1):
+def solve_sde(drift, diffusion, t_eval, get_ic, n_samples, dt=1e-2, key=None):
     t_eval = jnp.asarray(t_eval)
 
     @jit
@@ -26,8 +24,7 @@ def solve_sde(drift, diffusion, t_eval, get_ic, n_samples, dt=1e-2, key=None, ba
         key = jax.random.PRNGKey(random.randint(0, 1e6))
     keys = jax.random.split(key, num=n_samples)
     solve_single = vmap(solve_single)
-    if batches > 1:
-        solve_single = batchmap(solve_single, batches)
+
 
     sols = solve_single(keys)
 
