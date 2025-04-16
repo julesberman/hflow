@@ -2,8 +2,9 @@ import os
 import time
 from functools import partial
 from pathlib import Path
-import jax
+
 import h5py
+import jax
 import numpy as np
 import pandas as pd
 from einops import rearrange
@@ -11,18 +12,19 @@ from jax import jit, vmap
 
 import hflow.io.result as R
 from hflow.config import Data
+from hflow.data.ip import get_inertial_partices
+from hflow.data.lanl import get_lanl_data
 from hflow.data.lorenz9 import get_ic_lorenz9d, get_lorenz9d
 from hflow.data.mdyn import get_mdyn_sol
-from hflow.data.particles import (get_2d_bi, get_2d_lin, get_ic_bi,
-                                  get_ic_lin)
+from hflow.data.particles import get_2d_bi, get_2d_lin, get_ic_bi, get_ic_lin
+from hflow.data.pot import analytic_potential
+from hflow.data.rwave import get_wave_random_media
 from hflow.data.sde import solve_sde
 from hflow.data.trap import get_ic_trap, get_trap
 from hflow.data.utils import normalize
 from hflow.data.vlasov import run_vlasov
 from hflow.io.utils import log, save_pickle
-from hflow.data.ip import get_inertial_partices
-from hflow.data.rwave import get_wave_random_media
-from hflow.data.lanl import get_lanl_data
+
 
 def read_from_hdf5(path, n_samples):
     with h5py.File("/scratch/jmb1174/data/" + path + ".hdf5", "r") as file:
@@ -67,17 +69,19 @@ def get_data(problem, data_cfg: Data, key):
         mus = np.concatenate([train_mus, test_mus])
         sols = np.concatenate([sols[None], sols[None]])
         sols = rearrange(sols, 'M N T X Y -> M T N (X Y)')
-        
+
     elif problem == 'static':
         train_mus = np.asarray([0.0])
         test_mus = np.asarray([0.0])
         mus = np.concatenate([train_mus, test_mus])
-        sols = jax.random.normal(key, shape=(2,len(t_eval), n_samples, 2))
+        sols = jax.random.normal(key, shape=(2, len(t_eval), n_samples, 2))
         sols = np.asarray(sols)
-        
+
     elif problem == 'ip':
-        sols_train, train_mus, t_eval = get_inertial_partices(key, n_samples, train=True)
-        sols_test, test_mus, t_eval = get_inertial_partices(key, n_samples, train=False)
+        sols_train, train_mus, t_eval = get_inertial_partices(
+            key, n_samples, train=True)
+        sols_test, test_mus, t_eval = get_inertial_partices(
+            key, n_samples, train=False)
         mus = np.concatenate([train_mus, test_mus])
         sols = np.concatenate([sols_train, sols_test])
 
@@ -143,7 +147,7 @@ def get_data(problem, data_cfg: Data, key):
         sols = vmap(jit(solve_for_mu))(mus)
         sols = rearrange(sols, 'M N T D -> M T N D')
         sols = sols[:, :, :, :2]
-        
+
     elif problem == 'trap':
         train_mus = np.asarray([0.3, 0.4, 0.5, 0.7, 0.8, 0.9])
         test_mus = np.asarray([0.6])
@@ -161,18 +165,15 @@ def get_data(problem, data_cfg: Data, key):
         sols = np.asarray(sols)
         sols = rearrange(sols, 'M N T D -> M T N D')
 
-    elif problem == 'mdyn':
-        train_mus = np.asarray([1.0, 3.0, 4.0, 6.0])
-        test_mus = np.asarray([2.0, 5.0])
+    elif problem == 'pot':
+        var = 1
+        sol = analytic_potential(n_samples, t_eval, key, data_cfg.dim, var)
+        sol = np.squeeze(sol)
+        sol = rearrange(sol, 'N T D -> T N D')
+        train_mus = np.asarray([0.0])
+        test_mus = np.asarray([0.0])
         mus = np.concatenate([train_mus, test_mus])
-        system_dim = data_cfg.dim
-
-        mus = np.concatenate([train_mus, test_mus])
-        for mu in mus:
-            res = get_mdyn_sol(key, system_dim, n_samples, mu,
-                               gamma=0.0, alpha=0.0, sigma=1e-1, dt=data_cfg.dt)
-            sols.append(res)
-        sols = np.asarray(sols)
+        sols = np.repeat(sol[None], 2, axis=0)
 
     elif problem == "v6":
         mus = []
@@ -200,7 +201,6 @@ def get_data(problem, data_cfg: Data, key):
         sols = sols[:, :T]
         t_eval = t_eval[:T]
 
-        
     R.RESULT['train_mus_raw'] = train_mus
     R.RESULT['test_mus_raw'] = test_mus
 
@@ -218,7 +218,6 @@ def get_data(problem, data_cfg: Data, key):
 
     R.RESULT['t_eval'] = t_eval
 
-    
     sols, mus, t_eval = normalize_dataset(
         sols, mus, t_eval, data_cfg.normalize)
 
@@ -274,7 +273,7 @@ def normalize_dataset(sols, mus, t_eval, normalize_data):
                 mus_1, axis=(0), return_stats=True, method='std')
     else:
         mu_shift, mu_scale = 0.0, 1.0
-    R.RESULT['mu_norm'] = (mu_shift, mu_scale)  
+    R.RESULT['mu_norm'] = (mu_shift, mu_scale)
 
     if normalize_data:
         sols, d_shift, d_scale = normalize(
@@ -283,5 +282,5 @@ def normalize_dataset(sols, mus, t_eval, normalize_data):
     else:
         R.RESULT['data_norm'] = (0.0, 1.0)
 
-
+    return sols, mus_1, t1
     return sols, mus_1, t1

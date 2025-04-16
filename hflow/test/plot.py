@@ -14,7 +14,7 @@ from hflow.misc.plot import  scatter_movie, plot_grid_movie
 def get_hist_single(frame, nx):
     frame = frame.T
     H, x, y = jnp.histogram2d(
-        frame[0], frame[1], bins=nx)
+        frame[0], frame[1], bins=nx, range=[[0,1],[0,1]])
     return H
 
 
@@ -40,6 +40,10 @@ def plot_test(test_cfg: Test, true_sol, test_sol, t_int, n_plot, mu_i):
                 dim_idx = np.asarray([0, 3])
                 true_sol_sub = true_sol[:, :, dim_idx]
                 test_sol_sub = test_sol[:, :, dim_idx]
+            else:
+                test_sol_sub = test_sol
+                true_sol_sub = true_sol
+                
             plot_sol = jnp.hstack(
                 [true_sol_sub[:, idx_sample], test_sol_sub[:, idx_sample]])
             cs = [*['r']*n_plot, *['b']*n_plot]
@@ -55,6 +59,10 @@ def plot_test(test_cfg: Test, true_sol, test_sol, t_int, n_plot, mu_i):
                 dim_idx = np.asarray([0, 3])
                 true_sol_sub = true_sol[:, :, dim_idx]
                 test_sol_sub = test_sol[:, :, dim_idx]
+            else:
+                test_sol_sub = test_sol
+                true_sol_sub = true_sol
+
             idx_time = np.linspace(0, len(test_sol)-1, frames, dtype=np.int32)
             hist_sol_test = get_hist(test_sol_sub[idx_time])
             hist_sol_true = get_hist(true_sol_sub[idx_time])

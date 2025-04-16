@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass, field
 from typing import Any, List, Union
 
@@ -16,33 +17,58 @@ from hflow.misc.misc import epoch_time, unique_id
 #     "loss.sigma": "0.0",
 # }
 
+# SWEEP = {
+#     "problem": "ip",
+#     "optimizer.iters": "10_000, 25_000, 50_000",
+#     "loss.loss_fn": "dice",
+#     "seed": "1,2,3",
+#     "sample.scheme_t": "rand",
+#     "loss.sigma": "0.0",
+#     "x64": "True",
+#     "sample.bs_n": "512",
+#     "net.width": "128",
+#     "net.cond_in": "append",
+#     "data.normalize": "False"
+# }
+
+
+# SWEEP = {
+#     "problem": "rwave",
+#     "optimizer.iters": "25_000, 50_000, 100_000, 250_000",
+#     "loss.loss_fn": "dice, ov",
+#     "sample.scheme_t": "rand",
+#     "loss.sigma": "0.0",
+#     "x64": "False",
+#     "net.arch": "resnet",
+#     "data.sub_x": "4"
+# }
+
+
+# SWEEP = {
+#     "optimizer.iters": "100_000, 200_000, 500_000",
+#     "loss.loss_fn": "dice",
+#     "sample.scheme_t": "rand",
+#     "loss.sigma": "0.0, 1e-1, 0.15,",
+#     "net.width": "256,512",
+#     "net.cond_in": "append",
+#     "x64": "True",
+#     "net.arch": "mlp",
+#     "sample.bs_t": "512",
+#     "test.save_sol": "True"
+# }
+
+
 SWEEP = {
-    "problem": "ip",
-    "optimizer.iters": "10_000, 25_000, 50_000",  
-    "loss.loss_fn": "dice",
-    "seed": "1,2,3",
-    "sample.scheme_t": "rand",
-    "loss.sigma": "0.0",
-    "x64": "True",
-    "sample.bs_n": "512",
-    "net.width": "128",
-    "net.cond_in": "append",
-    "data.normalize": "False"
-}
+    "optimizer.iters": "1_000, 25_000, 50_000, 100_000, 200_000, 400_000, 800_000",
 
-
-
-
-SWEEP = {
-    "problem": "rwave",
-    "optimizer.iters": "20_000, 50_000, 100_000",  
+    "optimizer.lr": "1e-3",
     "loss.loss_fn": "dice, ov",
     "sample.scheme_t": "rand",
-    "loss.sigma": "0.0",
-    "x64": "False",
-    "net.arch": "resnet, unet",
-    "data.sub_x": "2,4"
-
+    "net.width": "128",
+    "net.cond_in": "append",
+    "x64": "True, False",
+    "net.arch": "mlp",
+    "data.normalize": "False"
 }
 
 SLURM_CONFIG = {
@@ -58,7 +84,7 @@ SLURM_CONFIG = {
 @dataclass
 class Network:
     arch: str = 'mlp'
-    width: int = 64
+    width: int = 128
     depth: int = 6
     cond_features: List[int] = field(default_factory=lambda: [64] * 4)
     activation: str = "swish"
@@ -89,6 +115,7 @@ class Data:
     omega: float = 8.0
     sub_x: int = 4
     dim: Union[int, None] = None
+
 
 @dataclass
 class Loss:
@@ -149,7 +176,8 @@ class Config:
     sample: Sample = field(default_factory=Sample)
 
     # misc
-    name: str = field(default_factory=lambda: f"{unique_id(4)}_{epoch_time(2)}")
+    name: str = field(
+        default_factory=lambda: f"{unique_id(4)}_{epoch_time(2)}")
     x64: bool = True  # whether to use 64 bit precision in jax
 
     platform: Union[str, None] = None  # gpu or cpu, None will let jax default
@@ -201,7 +229,7 @@ hydra_config = {
     },
     "job": {"env_set": {"XLA_PYTHON_CLIENT_PREALLOCATE": "false"}},
 }
-import logging
+
 logging.getLogger("matplotlib").setLevel(logging.WARNING)
 
 ##################################
@@ -228,9 +256,17 @@ bump_config = Config(
 
 bi_config = Config(
     problem="bi",
-    data=Data(t_end=12, dt=5e-3, n_samples=25_000),
+    data=Data(t_end=12, dt=5e-3, n_samples=10_000),
     test=Test(plot_particles=True, mean=True, wass=True),
 )
+
+
+pot_config = Config(
+    problem="pot",
+    data=Data(t_end=1, dt=1e-3, n_samples=2048, dim=10),
+    test=Test(plot_particles=True, mean=True, wass=True, analytic=True),
+)
+
 
 trap_config = Config(
     problem="trap",
@@ -239,26 +275,20 @@ trap_config = Config(
     test=Test(plot_particles=True, mean=True),
 )
 
-mdyn_config = Config(
-    problem="mdyn",
-    data=Data(t_end=1, dim=2, n_samples=10_000, dt=2e-3),
-    test=Test(plot_particles=True, wass=True),
-)
-
 lz9_config = Config(
     problem="lz9",
-    data=Data(t_end=20, n_samples=25_000, dt=1e-2),
-    loss=Loss(sigma=1e-1),
+    data=Data(t_end=20, n_samples=10_000, dt=1e-2),
     test=Test(
-        plot_particles=True, wass=True, mean=True, n_samples=25_000, t_samples=32
+        plot_particles=True, wass=True, mean=True, n_samples=10_000, t_samples=32
     ),
 )
 
 v6_config = Config(
     problem="v6",
     loss=Loss(sigma=5e-2),
-    data=Data(n_samples=25_000, t_end=6),
+    data=Data(n_samples=25_000, t_end=9),
     test=Test(plot_hist=True, wass=True, n_samples=25_000, electric=True),
+    sample=Sample(bs_n=512, bs_t=128, scheme_t='rand'),
 )
 
 lin_config = Config(
@@ -273,7 +303,7 @@ lin_config = Config(
 static_config = Config(
     problem="static",
     data=Data(t_end=1, dt=(1/512), n_samples=10_000
-    ),
+              ),
     test=Test(plot_particles=True, mean=True, wass=True),
     net=Network(width=32, depth=3, cond_in='append'),
     loss=Loss(sigma=0.0, loss_fn='dice'),
@@ -301,7 +331,6 @@ rwave_config = Config(
 )
 
 
-
 lanl_config = Config(
     problem="lanl",
     data=Data(sub_x=4),
@@ -312,9 +341,9 @@ lanl_config = Config(
 )
 
 cs.store(name="lz9", node=lz9_config)
-cs.store(name="mdyn", node=mdyn_config)
 cs.store(name="trap", node=trap_config)
 cs.store(name="bi", node=bi_config)
+cs.store(name="pot", node=pot_config)
 cs.store(name="vtwo", node=two_config)
 cs.store(name="vbump", node=bump_config)
 cs.store(name="v6", node=v6_config)

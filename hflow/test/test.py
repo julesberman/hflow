@@ -29,7 +29,8 @@ def test_model(cfg: Config, data, s_fn, opt_params, key):
     t_int = np.linspace(0.0, 1.0, len(t))
     M, T, N, D = sol.shape
     if test_cfg.t_samples is not None:
-        t_idx = np.linspace(0, T - 1, test_cfg.t_samples, endpoint=True, dtype=np.int32)
+        t_idx = np.linspace(0, T - 1, test_cfg.t_samples,
+                            endpoint=True, dtype=np.int32)
         sol = sol[:, t_idx]
         t_int = t_int[t_idx]
 
@@ -65,9 +66,16 @@ def test_model(cfg: Config, data, s_fn, opt_params, key):
             R.RESULT[f"true_sol_{mu_i}"] = true_sol
             R.RESULT[f"test_sol_{mu_i}"] = test_sol
 
-        compute_metrics(cfg, test_cfg, true_sol, test_sol, mu_i)
+        compute_metrics(cfg, test_cfg, true_sol,
+                        test_sol, t_int, s_fn, opt_params, mus[mu_i], mu_i)
 
-        plot_test(test_cfg, true_sol, test_sol, t_int, test_cfg.n_plot_samples, mu_i)
+        plot_test(test_cfg, true_sol, test_sol, t_int,
+                  test_cfg.n_plot_samples, mu_i)
+
+    for k, v in R.RESULT.items():
+        if k[:3] == 'all':
+            R.RESULT[k] = np.mean(R.RESULT[k])
+            print(f"{k}: {R.RESULT[k]:.4f}")
 
         # if test_cfg.additional:
         #     additional_ops(s_fn, opt_params, test_sol, t_int, mus[mu_i], mu_i)
@@ -107,7 +115,8 @@ def solve_test_cfm(s_fn, params, ics, t_int, mu, T):
     def integrate(mu, T, params):
 
         def fn(tau, y):
-            mu_t_tau = jnp.concatenate([mu.reshape(1), T.reshape(1), tau.reshape(1)])
+            mu_t_tau = jnp.concatenate(
+                [mu.reshape(1), T.reshape(1), tau.reshape(1)])
             return s_Vx(mu_t_tau, y, params)
 
         sol = odeint_rk4(fn, ics, taus)
@@ -159,7 +168,8 @@ def solve_test_ald(s_fn, params, ics, t_int, sigmas, mu, key, T):
                 key, subkey = jax.random.split(key)
                 z = jax.random.normal(subkey, x.shape)
                 mu_t_sigma = jnp.concatenate([mu, t_infer, sigma])
-                x = x + alpha * 0.5 * s_fn(mu_t_sigma, x, params) + jnp.sqrt(alpha) * z
+                x = x + alpha * 0.5 * \
+                    s_fn(mu_t_sigma, x, params) + jnp.sqrt(alpha) * z
         return x
 
     ald_vmap = vmap(ald, (0, None, None, None, None))

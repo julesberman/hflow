@@ -4,10 +4,10 @@ import jax
 import jax.numpy as jnp
 from einops import rearrange
 from jax import grad, jacfwd, jacrev, jit, jvp, vmap
+from jax.flatten_util import ravel_pytree
 
 from hflow.config import Loss, Sample
-from hflow.misc.jax import hess_trace_estimator, tracewrap, meanvmap
-from jax.flatten_util import ravel_pytree
+from hflow.misc.jax import hess_trace_estimator, meanvmap, tracewrap
 
 
 def get_loss_fn(loss_cfg: Loss, sample_cfg: Sample, s_fn):
@@ -19,8 +19,8 @@ def get_loss_fn(loss_cfg: Loss, sample_cfg: Sample, s_fn):
             alpha=loss_cfg.alpha,
             alpha_quant=loss_cfg.alpha_quant,
         )
-    elif loss_cfg.loss_fn == "ov_old":
-        loss_fn = OV_Loss_old(s_fn, sigma=loss_cfg.sigma, trace=loss_cfg.trace)
+    # elif loss_cfg.loss_fn == "ov_old":
+    #     loss_fn = OV_Loss_old(s_fn, sigma=loss_cfg.sigma, trace=loss_cfg.trace)
     elif loss_cfg.loss_fn == "dice":
         loss_fn = DICE_Loss(
             s_fn,
@@ -217,8 +217,6 @@ def NCSM_Loss(s, sigmas, t_batches=1):
             return loss.mean()
 
         score_match_time_sigma = vmap(score_match_time_sigma, (0, None))
-        if t_batches > 1:
-            score_match_time_sigma = batchmap(score_match_time_sigma, t_batches)
         score_match_time_sigma = vmap(score_match_time_sigma, (None, 0))
 
         return score_match_time_sigma(xt_tensor, sigmas).mean()
@@ -281,8 +279,6 @@ def CFM_Loss(s_fn, t_batches=1):
             return loss.mean()
 
         flow_match_time = vmap(flow_match_time, (0, None))
-        if t_batches > 1:
-            flow_match_time = batchmap(flow_match_time, t_batches)
         flow_match_time = vmap(flow_match_time, (None, 0))
 
         bs_tau = 32
@@ -353,100 +349,100 @@ def SI_Loss(s_fn, sigma):
     return loss_fn
 
 
-def OV_Loss_old(
-    s,
-    noise=0.0,
-    sigma=0.0,
-    return_interior=False,
-    trace="true",
-    t_batches=1,
-    n_batches=1,
-):
+# def OV_Loss_old(
+#     s,
+#     noise=0.0,
+#     sigma=0.0,
+#     return_interior=False,
+#     trace="true",
+#     t_batches=1,
+#     n_batches=1,
+# ):
 
-    def s_sep(mu, t, x, params):
-        mu_t = jnp.concatenate([mu, t])
-        return s(mu_t, x, params)
+#     def s_sep(mu, t, x, params):
+#         mu_t = jnp.concatenate([mu, t])
+#         return s(mu_t, x, params)
 
-    s_dt = jacrev(s_sep, 1)
-    s_dt_Vx = vmap(s_dt, (None, None, 0, None))
+#     s_dt = jacrev(s_sep, 1)
+#     s_dt_Vx = vmap(s_dt, (None, None, 0, None))
 
-    s_Vx = vmap(s, in_axes=(None, 0, None))
-    s_dx = jacrev(s, 1)
-    s_dx_Vx = vmap(s_dx, in_axes=(None, 0, None))
+#     s_Vx = vmap(s, in_axes=(None, 0, None))
+#     s_dx = jacrev(s, 1)
+#     s_dx_Vx = vmap(s_dx, in_axes=(None, 0, None))
 
-    if trace == "hutch":
-        trace_dds = hess_trace_estimator(s, argnum=1)
-        trace_dds_Vx = vmap(trace_dds, (None, None, 0, None))
-    else:
-        trace_dds = tracewrap(jacfwd(s_dx, 1))
-        trace_dds_Vx = vmap(trace_dds, (None, 0, None))
-        if n_batches > 1:
-            trace_dds_Vx = batchmap(trace_dds_Vx, n_batches, argnum=1)
-    if n_batches > 1:
-        s_dt_Vx = batchmap(s_dt_Vx, n_batches, argnum=2)
-        s_Vx = batchmap(s_Vx, n_batches, argnum=1)
-        s_dx_Vx = batchmap(s_dx_Vx, n_batches, argnum=1)
+#     if trace == "hutch":
+#         trace_dds = hess_trace_estimator(s, argnum=1)
+#         trace_dds_Vx = vmap(trace_dds, (None, None, 0, None))
+#     else:
+#         trace_dds = tracewrap(jacfwd(s_dx, 1))
+#         trace_dds_Vx = vmap(trace_dds, (None, 0, None))
+#         if n_batches > 1:
+#             trace_dds_Vx = batchmap(trace_dds_Vx, n_batches, argnum=1)
+#     if n_batches > 1:
+#         s_dt_Vx = batchmap(s_dt_Vx, n_batches, argnum=2)
+#         s_Vx = batchmap(s_Vx, n_batches, argnum=1)
+#         s_dx_Vx = batchmap(s_dx_Vx, n_batches, argnum=1)
 
-    def loss_fn(params, x_t_batch, mu, t_batch, quad_weights, key):
+#     def loss_fn(params, x_t_batch, mu, t_batch, quad_weights, key):
 
-        T, N, D = x_t_batch.shape
-        T, MT = t_batch.shape
-        mu_t_0, mu_t_1 = jnp.concatenate([mu, t_batch[0]]), jnp.concatenate(
-            [mu, t_batch[-1]]
-        )
+#         T, N, D = x_t_batch.shape
+#         T, MT = t_batch.shape
+#         mu_t_0, mu_t_1 = jnp.concatenate([mu, t_batch[0]]), jnp.concatenate(
+#             [mu, t_batch[-1]]
+#         )
 
-        bound = s_Vx(mu_t_0, x_t_batch[0], params) - s_Vx(mu_t_1, x_t_batch[-1], params)
+#         bound = s_Vx(mu_t_0, x_t_batch[0], params) - s_Vx(mu_t_1, x_t_batch[-1], params)
 
-        x_t_batch = x_t_batch[1:-1]
-        t_batch = t_batch[1:-1]
+#         x_t_batch = x_t_batch[1:-1]
+#         t_batch = t_batch[1:-1]
 
-        xt_tensor = rearrange(x_t_batch, "T N D -> T (N D)")
-        xt_tensor = jnp.hstack([xt_tensor, t_batch])
+#         xt_tensor = rearrange(x_t_batch, "T N D -> T (N D)")
+#         xt_tensor = jnp.hstack([xt_tensor, t_batch])
 
-        def interior_loss(xt_tensor):
-            x_batch, t = xt_tensor[:-MT], xt_tensor[-MT:]
-            x_batch = rearrange(x_batch, "(N D) -> N D", D=D)
+#         def interior_loss(xt_tensor):
+#             x_batch, t = xt_tensor[:-MT], xt_tensor[-MT:]
+#             x_batch = rearrange(x_batch, "(N D) -> N D", D=D)
 
-            mu_t = jnp.concatenate([mu, t])
+#             mu_t = jnp.concatenate([mu, t])
 
-            ut = s_dt_Vx(mu, t, x_batch, params)
-            ut = jnp.squeeze(ut)
+#             ut = s_dt_Vx(mu, t, x_batch, params)
+#             ut = jnp.squeeze(ut)
 
-            # entropic
-            if sigma > 0.0:
-                if trace == "hutch":
-                    seed = jax.random.uniform(key, shape=()) + mu + t
-                    seed = jnp.linalg.norm(seed)
-                    keyt = jax.random.PRNGKey((seed * 1e8).astype(int))
-                    gu, tra = trace_dds_Vx(keyt, mu_t, x_batch, params)
-                else:
-                    tra = trace_dds_Vx(mu_t, x_batch, params)
-                    gu = s_dx_Vx(mu_t, x_batch, params)
+#             # entropic
+#             if sigma > 0.0:
+#                 if trace == "hutch":
+#                     seed = jax.random.uniform(key, shape=()) + mu + t
+#                     seed = jnp.linalg.norm(seed)
+#                     keyt = jax.random.PRNGKey((seed * 1e8).astype(int))
+#                     gu, tra = trace_dds_Vx(keyt, mu_t, x_batch, params)
+#                 else:
+#                     tra = trace_dds_Vx(mu_t, x_batch, params)
+#                     gu = s_dx_Vx(mu_t, x_batch, params)
 
-                ent = tra * sigma**2 * 0.5
-            else:
-                gu = s_dx_Vx(mu_t, x_batch, params)
-                ent = 0.0
+#                 ent = tra * sigma**2 * 0.5
+#             else:
+#                 gu = s_dx_Vx(mu_t, x_batch, params)
+#                 ent = 0.0
 
-            gu = 0.5 * jnp.sum(gu**2, axis=1)
+#             gu = 0.5 * jnp.sum(gu**2, axis=1)
 
-            return (ut + gu + ent).mean()
+#             return (ut + gu + ent).mean()
 
-        interior_loss = vmap(interior_loss)
-        if t_batches > 1:
-            interior_loss = batchmap(interior_loss, t_batches)
-        interior = interior_loss(xt_tensor)
+#         interior_loss = vmap(interior_loss)
+#         if t_batches > 1:
+#             interior_loss = batchmap(interior_loss, t_batches)
+#         interior = interior_loss(xt_tensor)
 
-        if quad_weights is not None:
-            loss_interior = (interior * quad_weights).sum()
-        else:
-            loss_interior = interior.mean()
+#         if quad_weights is not None:
+#             loss_interior = (interior * quad_weights).sum()
+#         else:
+#             loss_interior = interior.mean()
 
-        loss = bound.mean() + loss_interior
+#         loss = bound.mean() + loss_interior
 
-        if return_interior:
-            return loss, interior
+#         if return_interior:
+#             return loss, interior
 
-        return loss
+#         return loss
 
-    return loss_fn
+#     return loss_fn
